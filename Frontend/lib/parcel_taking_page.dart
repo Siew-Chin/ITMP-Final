@@ -11,24 +11,51 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
   int _quantity = 1;
   final TextEditingController _priceController = TextEditingController();
 
-  // 增加数量
+  @override
+  void initState() {
+    super.initState();
+    _calculatePrice();
+  }
+
+  void _calculatePrice() {
+    double price = 0.0;
+    if (_quantity <= 5) {
+      price = _quantity * 1.0;
+    } else {
+      price = 5.0 + ((_quantity - 5) * 2.0);
+    }
+    _priceController.text = price.toStringAsFixed(2);
+  }
+
   void _incrementQuantity() {
     setState(() {
-      _quantity++;
+      if (_quantity < 10) {
+        _quantity++;
+        _calculatePrice();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Maximum 10 parcels allowed per order!"),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     });
   }
 
-  // 减少数量
   void _decrementQuantity() {
     setState(() {
-      if (_quantity > 1) _quantity--;
+      if (_quantity > 1) {
+        _quantity--;
+        _calculatePrice();
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 继承你截图里的浅蓝背景色
       backgroundColor: Colors.blue[50], 
       appBar: AppBar(
         title: const Text(
@@ -44,7 +71,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. 公告栏 (Announcement Place)
+            // 1. Pricing Announcement (Yellow)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -54,12 +81,35 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.campaign, color: Colors.orange),
+                  Icon(Icons.local_offer, color: Colors.orange),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      "Announcement: Please ensure your parcel size is acceptable for a single runner.",
-                      style: TextStyle(color: Colors.orange, fontSize: 14),
+                      "Pricing: 1-5 parcels are RM 1/each. Parcels above 5 are RM 2/each. (Max 10)",
+                      style: TextStyle(color: Colors.orange, fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12), // 小间距
+
+            // 2. NEW: ID & Payment Note (Teal)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.teal[50],
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.teal.withValues(alpha: 0.5)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.badge_outlined, color: Colors.teal), // 证件小图标
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Note: The runner will reach your dorm to take your ID card. Please pay when the parcel arrives at your dorm.",
+                      style: TextStyle(color: Colors.teal, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -67,7 +117,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 25),
 
-            // 2. 包裹数量选择 (Quantity)
+            // Quantity Selection
             const Text(
               "How many parcels?",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -113,48 +163,39 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 25),
 
-            // 3. 价格选择/输入 (Price)
+            // Auto-Calculated Price
             const Text(
-              "Offer a Price (RM)",
+              "Total Price (RM)",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.grey[200], 
                 borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  )
-                ],
               ),
               child: TextField(
                 controller: _priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                readOnly: true, 
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   prefixIcon: Icon(Icons.payments_outlined, color: Colors.blueGrey),
-                  hintText: "e.g. 5.00",
                   prefixText: "RM ",
                   prefixStyle: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
               ),
             ),
             const SizedBox(height: 40),
 
-            // 4. 下单按钮 (Launch Order)
+            // Launch Order Button
             ElevatedButton(
               onPressed: () {
-                // 这里暂时只做打印测试，之后再接你的 Flask 后端
-                print("Order Launched! Qty: $_quantity, Price: RM ${_priceController.text}");
+                print("Order Launched! Qty: $_quantity, Total Price: RM ${_priceController.text}");
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E3A8A), // 深蓝色，类似你截图里的按钮底色
+                backgroundColor: const Color(0xFF1E3A8A),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(
