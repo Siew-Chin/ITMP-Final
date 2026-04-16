@@ -105,6 +105,23 @@ def get_pending_orders():
         return jsonify(parse_json(pending_orders)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/api/orders/<order_id>/complete', methods=['PUT'])
+def complete_order(order_id):
+    try:
+        # This searches for the specific order and changes its status to "completed"
+        result = orders_col.update_one(
+            {"order_id": order_id}, 
+            {"$set": {"status": "completed"}}
+        )
+        
+        if result.modified_count > 0:
+            return jsonify({"message": "Order successfully completed!"}), 200
+        else:
+            return jsonify({"error": "Order not found or already completed"}), 404
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'order_detail_page.dart';
 
 class RunnerMainMenu extends StatefulWidget {
-  final String studentID; // 接收传来的 ID
+  final String studentID;
   const RunnerMainMenu({super.key, required this.studentID});
 
   @override
-  _RunnerMainMenuState createState() => _RunnerMainMenuState();
+  State<RunnerMainMenu> createState() => _RunnerMainMenuState();
 }
 
 class _RunnerMainMenuState extends State<RunnerMainMenu> {
   Future<List<dynamic>> fetchAvailableOrders() async {
-    final response = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/orders/pending'),
-    );
+    final url = Uri.parse('http://10.0.2.2:5000/api/orders/pending');
+    final response = await http.get(url);
 
     if (response.statusCode == 200) {
-      return json.decode(response.body);
+      return jsonDecode(response.body);
     } else {
       throw Exception('Failed to load orders');
     }
@@ -26,9 +26,11 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
-        title: Text('Runner: ${widget.studentID}'), // 显示 Runner ID
-        backgroundColor: Colors.blueAccent,
+        title: const Text('Runner Orders'),
+        backgroundColor: const Color(0xFF87CEEB),
+        elevation: 0,
       ),
       body: FutureBuilder<List<dynamic>>(
         future: fetchAvailableOrders(),
@@ -36,7 +38,7 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(child: Text('Connect to Flask to see orders'));
+            return const Center(child: Text('Connect to Flask to see orders'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(child: Text('No available orders right now.'));
           }
@@ -45,23 +47,52 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
           return ListView.builder(
             itemCount: orders.length,
             itemBuilder: (context, index) {
-              final order = orders[index];
+              // Forced type-casting to help the Flutter Analyzer
+              final Map<String, dynamic> order =
+                  orders[index] as Map<String, dynamic>;
+
               return Card(
-                margin: const EdgeInsets.all(10),
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 4,
                 child: ListTile(
+                  contentPadding: const EdgeInsets.all(15),
                   title: Text(
-                    '${order['order_type'].toString().toUpperCase()} - RM ${order['cost']}',
+                    '${(order['type'] ?? 'Order').toString().toUpperCase()} - RM ${order['price'] ?? '0.00'}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
-                  subtitle: Text('Details: ${order['details']}'),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text('Details: ${order['details'] ?? 'No details'}'),
+                  ),
                   trailing: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                     onPressed: () {
-                      // 这里以后可以写：接单 API，带上 widget.studentID
-                      print('Runner ${widget.studentID} took order ${order['id']}');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderDetailPage(order: order),
+                        ),
+                      );
                     },
                     child: const Text('Take'),
-                  ),
-                ),
-              );
+                  ), // Closes ElevatedButton
+                ), // Closes ListTile
+              ); // Closes Card
             },
           );
         },
