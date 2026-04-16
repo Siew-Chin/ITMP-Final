@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-<<<<<<< HEAD
 import 'order_detail_page.dart';
-=======
-import 'runner_parcelconfirm.dart'; // 确保你的 ParcelPage 在这个文件里
->>>>>>> origin/feature-skx
+import 'login_page.dart'; // 💡 记得导入你的登录页
 
 class RunnerMainMenu extends StatefulWidget {
   final String studentID;
@@ -16,31 +13,48 @@ class RunnerMainMenu extends StatefulWidget {
 }
 
 class _RunnerMainMenuState extends State<RunnerMainMenu> {
-  // 获取待接订单列表 (API 9)
+  // 获取待接单列表
   Future<List<dynamic>> fetchAvailableOrders() async {
-<<<<<<< HEAD
-    final url = Uri.parse('http://10.0.2.2:5000/api/orders/pending');
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load orders');
-=======
     try {
       final response = await http.get(
         Uri.parse('http://10.0.2.2:5000/api/orders/pending'),
       );
-
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
         throw Exception('Failed to load orders');
       }
     } catch (e) {
-      throw Exception('Server connection failed: $e');
->>>>>>> origin/feature-skx
+      return [];
     }
+  }
+
+  // ✨ 注销逻辑
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to log out?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              // 💡 关键修改：这里要用 Login() 而不是 LoginPage()
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const Login()), 
+                (route) => false,
+              );
+            },
+            child: const Text("Logout", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -48,85 +62,18 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
-<<<<<<< HEAD
-<<<<<<< HEAD
-        title: const Text('Runner Orders'),
+        title: Text('Runner: ${widget.studentID}'),
         backgroundColor: const Color(0xFF87CEEB),
         elevation: 0,
-=======
-        title: const Text('To Your Dorm'),
-        backgroundColor: Colors.blue[200],
-        elevation: 0,
-        leading: const Icon(Icons.menu),
->>>>>>> origin/feature-tcr
-      ),
-      body: FutureBuilder<List<dynamic>>(
-        future: fetchAvailableOrders(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return const Center(child: Text('Connect to Flask to see orders'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No available orders right now.'));
-          }
-
-          final orders = snapshot.data!;
-          return ListView.builder(
-            itemCount: orders.length,
-            itemBuilder: (context, index) {
-              // Forced type-casting to help the Flutter Analyzer
-              final Map<String, dynamic> order =
-                  orders[index] as Map<String, dynamic>;
-
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                elevation: 4,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(15),
-                  title: Text(
-                    '${(order['type'] ?? 'Order').toString().toUpperCase()} - RM ${order['price'] ?? '0.00'}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text('Details: ${order['details'] ?? 'No details'}'),
-                  ),
-                  trailing: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => OrderDetailPage(order: order),
-                        ),
-                      );
-                    },
-                    child: const Text('Take'),
-                  ), // Closes ElevatedButton
-                ), // Closes ListTile
-              ); // Closes Card
-            },
-          );
-        },
-=======
-        title: Text('Runner: ${widget.studentID}'),
-        backgroundColor: Colors.blueAccent,
+        foregroundColor: Colors.black87,
+        // ✨ 在右上角添加注销按钮
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _handleLogout,
+            tooltip: 'Logout',
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async => setState(() {}),
@@ -135,98 +82,81 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return const Center(
-                child: Text('Connect to Flask to see orders'),
-              );
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(
-                child: Text('No available orders right now.'),
-              );
             }
 
-            final allOrders = snapshot.data!;
+            final allOrders = snapshot.data ?? [];
 
-            return ListView.builder(
-              itemCount: allOrders.length,
-              itemBuilder: (context, index) {
-                final order = allOrders[index];
-                final String type = order['type'] ?? 'parcel';
+            return CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                if (allOrders.isEmpty)
+                  const SliverFillRemaining(
+                    child: Center(child: Text('No available orders right now.')),
+                  )
+                else
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final order = allOrders[index];
+                        final String type = (order['type'] ?? 'parcel').toString();
 
-                return Card(
-                  margin: const EdgeInsets.all(10),
-                  child: ListTile(
-                    leading: Icon(
-                      type == 'food' ? Icons.fastfood : Icons.inventory_2,
-                      color: type == 'food' ? Colors.orange : Colors.blue,
-                    ),
-                    title: Text(
-                      '${type.toUpperCase()} - RM ${order['price'] ?? '0.0'}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      'Dorm: ${order['dorm'] ?? "N/A"}\nDetails: ${order['details'] ?? "No details"}',
-                    ),
-                    trailing: ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          final response = await http.post(
-                            Uri.parse('http://10.0.2.2:5000/api/runner/take'),
-                            headers: {"Content-Type": "application/json"},
-                            body: json.encode({
-                              "order_id": order['order_id'],
-                              "runner_id": widget.studentID,
-                            }),
-                          );
-
-                          if (response.statusCode == 200) {
-                            if (!context.mounted) return;
-
-                            // ✨ 核心逻辑：区分跳转
-                            if (type == 'parcel') {
-                              // 是包裹，跳转到你的 ParcelPage
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      ParcelPage(orderId: order['order_id']),
-                                ),
-                              );
-                            } else {
-                              // 是食物，暂时不跳转，只弹个提示
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Food order accepted! (Food Page not ready yet)',
-                                  ),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                              // 刷新一下列表，把接了的单刷掉
-                              setState(() {});
-                            }
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Failed to take order'),
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          elevation: 4,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(15),
+                            leading: CircleAvatar(
+                              backgroundColor: type == 'food' ? Colors.orange[100] : Colors.blue[100],
+                              child: Icon(
+                                type == 'food' ? Icons.fastfood : Icons.inventory_2,
+                                color: type == 'food' ? Colors.orange : Colors.blue,
                               ),
-                            );
-                          }
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Network Error')),
-                          );
-                        }
+                            ),
+                            title: Text(
+                              '${type.toUpperCase()} - RM ${
+                                type == 'parcel'
+                                  ? (int.tryParse(order['parcel_qty']?.toString() ?? '1') ?? 1) < 5
+                                    ? (int.tryParse(order['parcel_qty']?.toString() ?? '1') ?? 1) * 2.0
+                                    : (int.tryParse(order['parcel_qty']?.toString() ?? '1') ?? 1) * 1.0
+                                  : (double.tryParse(order['price']?.toString() ?? '0') ?? 0.0) + 5.0
+                              }',
+                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                            ),
+                            subtitle: Text('Dorm: ${order['dorm'] ?? "N/A"}'),
+                            trailing: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => OrderDetailPage(order: order)),
+                                );
+                              },
+                              child: const Text('Take', style: TextStyle(color: Colors.white)),
+                            ),
+                          ),
+                        );
                       },
-                      child: const Text('Take'),
+                      childCount: allOrders.length,
                     ),
                   ),
-                );
-              },
+                
+                // ✨ 底部的提示小字
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Text(
+                        "Swipe down to refresh orders",
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             );
           },
         ),
->>>>>>> origin/feature-skx
       ),
     );
   }
