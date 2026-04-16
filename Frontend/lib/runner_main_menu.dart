@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'runner_parcelconfirm.dart'; // 确保导入了你的页面
+import 'runner_parcelconfirm.dart'; // 确保你的 ParcelPage 在这个文件里
 
 class RunnerMainMenu extends StatefulWidget {
   final String studentID;
@@ -12,16 +12,20 @@ class RunnerMainMenu extends StatefulWidget {
 }
 
 class _RunnerMainMenuState extends State<RunnerMainMenu> {
-  // 获取待接订单列表 (对应 API 9)
+  // 获取待接订单列表 (API 9)
   Future<List<dynamic>> fetchAvailableOrders() async {
-    final response = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/orders/pending'),
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:5000/api/orders/pending'),
+      );
 
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to load orders');
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to load orders');
+      }
+    } catch (e) {
+      throw Exception('Server connection failed: $e');
     }
   }
 
@@ -32,7 +36,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
         title: Text('Runner: ${widget.studentID}'),
         backgroundColor: Colors.blueAccent,
       ),
-      // 添加下拉刷新功能，方便跑腿员刷出新单子
       body: RefreshIndicator(
         onRefresh: () async => setState(() {}),
         child: FutureBuilder<List<dynamic>>(
@@ -50,17 +53,23 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
               );
             }
 
-            final orders = snapshot.data!;
+            final allOrders = snapshot.data!;
+
             return ListView.builder(
-              itemCount: orders.length,
+              itemCount: allOrders.length,
               itemBuilder: (context, index) {
-                final order = orders[index];
+                final order = allOrders[index];
+                final String type = order['type'] ?? 'parcel';
+
                 return Card(
                   margin: const EdgeInsets.all(10),
                   child: ListTile(
-                    // --- 优化 UI 显示字段 ---
+                    leading: Icon(
+                      type == 'food' ? Icons.fastfood : Icons.inventory_2,
+                      color: type == 'food' ? Colors.orange : Colors.blue,
+                    ),
                     title: Text(
-                      '${(order['type'] ?? 'PARCEL').toString().toUpperCase()} - RM ${order['money_to_receive'] ?? '0.0'}',
+                      '${type.toUpperCase()} - RM ${order['price'] ?? '0.0'}',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
@@ -69,7 +78,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                     trailing: ElevatedButton(
                       onPressed: () async {
                         try {
-                          // 1. 调用 API 12: 确认接单
                           final response = await http.post(
                             Uri.parse('http://10.0.2.2:5000/api/runner/take'),
                             headers: {"Content-Type": "application/json"},
@@ -80,22 +88,41 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                           );
 
                           if (response.statusCode == 200) {
-                            // 2. 接单成功跳转，此时你的 ParcelPage 会通过 order_id 运行 API 10
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ParcelPage(orderId: order['order_id']),
-                              ),
-                            );
+                            if (!context.mounted) return;
+
+                            // ✨ 核心逻辑：区分跳转
+                            if (type == 'parcel') {
+                              // 是包裹，跳转到你的 ParcelPage
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ParcelPage(orderId: order['order_id']),
+                                ),
+                              );
+                            } else {
+                              // 是食物，暂时不跳转，只弹个提示
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Food order accepted! (Food Page not ready yet)',
+                                  ),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              // 刷新一下列表，把接了的单刷掉
+                              setState(() {});
+                            }
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Reload Failure')),
+                              const SnackBar(
+                                content: Text('Failed to take order'),
+                              ),
                             );
                           }
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Reload Failure')),
+                            const SnackBar(content: Text('Network Error')),
                           );
                         }
                       },
@@ -110,13 +137,4 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
       ),
     );
   }
-}
-
-void main() {
-  runApp(
-    const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: RunnerMainMenu(studentID: "TEST1234"),
-    ),
-  );
 }
