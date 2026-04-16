@@ -1,5 +1,10 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient  # 导入数据库驱动
+import certifi
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
 
 app = Flask(__name__)
 
