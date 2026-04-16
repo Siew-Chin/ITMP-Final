@@ -28,9 +28,16 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
       appBar: AppBar(
+<<<<<<< HEAD
         title: const Text('Runner Orders'),
         backgroundColor: const Color(0xFF87CEEB),
         elevation: 0,
+=======
+        title: const Text('To Your Dorm'),
+        backgroundColor: Colors.blue[200],
+        elevation: 0,
+        leading: const Icon(Icons.menu),
+>>>>>>> origin/feature-tcr
       ),
       body: FutureBuilder<List<dynamic>>(
         future: fetchAvailableOrders(),
