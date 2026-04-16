@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 // Parcel or Food Delivery page
 class ParcelOrFood extends StatefulWidget {
-  final String studentID; // 接收传来的 ID
+  final String studentID; // Receive the passed student ID
   const ParcelOrFood({super.key, required this.studentID});
 
   @override
@@ -27,7 +27,7 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
             children: [
               const SizedBox(height: 10),
               Text(
-                "Welcome, ${widget.studentID}", // 显示当前用户ID
+                "Welcome, ${widget.studentID}", // Show the student ID on the page
                 style: const TextStyle(fontSize: 16, color: Colors.blueGrey),
               ),
               const Text(
@@ -36,7 +36,7 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
               ),
               const SizedBox(height: 20),
 
-              // Parcel Delivery 卡片
+              // Parcel Delivery 
               _serviceCard(
                 "Parcel Delivery", 
                 "assets/parcel_image.png", 
@@ -45,7 +45,7 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
 
               const SizedBox(height: 20),
 
-              // Food Delivery 卡片
+              // Food Delivery 
               _serviceCard(
                 "Food Delivery", 
                 "assets/fooddelivery_image.png", 
@@ -58,7 +58,7 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
     );
   }
 
-  // 封装一个通用的卡片组件，减少重复代码
+  // Reusable card widget for services
   Widget _serviceCard(String title, String imagePath, Widget destination) {
     return Container(
       decoration: BoxDecoration(
@@ -127,5 +127,5 @@ class ParcelPage extends StatelessWidget {
 class FoodDelivery extends StatelessWidget {
   const FoodDelivery({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text("Food Page")));
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text("Food Delivery Page")));
 }

@@ -6,7 +6,7 @@ import 'runner_main_menu.dart';
 
 // User or Runner page
 class UserOrRunner extends StatefulWidget {
-  // 1. 数据传递：接收从登录/注册页传来的 studentID
+  //Data passing: receive the student ID from login page
   final String studentID;
   const UserOrRunner({super.key, required this.studentID});
 
@@ -15,7 +15,6 @@ class UserOrRunner extends StatefulWidget {
 }
 
 class UserOrRunnerState extends State<UserOrRunner> {
-  // 1. 后端交互：通知服务器角色选择
   Future<void> selectRole(String role) async {
     final url = Uri.parse('http://10.0.2.2:5000/api/user/update_role');
 
@@ -35,10 +34,10 @@ class UserOrRunnerState extends State<UserOrRunner> {
         // 2. 跳转目标：根据选择跳转到相应页面
         Widget nextPage;
         if (role == 'student') {
-          // 跳转到 ParcelOrFood 页面并传 ID
+          //Navigate to ParcelOrFood page and pass the student ID
           nextPage = ParcelOrFood(studentID: widget.studentID); 
         } else {
-          // 跳转到 RunnerMainMenu 页面并传 ID
+          //Navigate to RunnerMainMenu page and pass the student ID
           nextPage = RunnerMainMenu(studentID: widget.studentID);
         }
         Navigator.push(
@@ -46,7 +45,6 @@ class UserOrRunnerState extends State<UserOrRunner> {
           MaterialPageRoute(builder: (context) => nextPage),
           );
       } else {
-        // 错误处理
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Failed to update role. Please try again.")),
         );
@@ -58,7 +56,6 @@ class UserOrRunnerState extends State<UserOrRunner> {
     }
   }
 
-  // 2. UI 表现 & 图片处理：使用 Stack 和装饰容器封装卡片
   Widget _roleCard(String title, String imagePath, String roleValue) {
     return Container(
       decoration: BoxDecoration(
@@ -74,10 +71,9 @@ class UserOrRunnerState extends State<UserOrRunner> {
         ],
       ),
       child: GestureDetector(
-        onTap: () => selectRole(roleValue), // 点击触发后端同步和跳转
+        onTap: () => selectRole(roleValue), 
         child: Stack(
           children: [
-            // 2. 图片处理：圆角裁剪和固定高度
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: Image.asset(
@@ -87,7 +83,6 @@ class UserOrRunnerState extends State<UserOrRunner> {
                 fit: BoxFit.cover,
               ),
             ),
-            // 2. UI 表现：右上角的角色标签
             Positioned(
               top: 10,
               right: 10,
@@ -135,7 +130,6 @@ class UserOrRunnerState extends State<UserOrRunner> {
               ),
               const SizedBox(height: 20),
               
-              // 调用封装好的卡片组件
               _roleCard("User", "assets/user_image.png", "student"),
               const SizedBox(height: 20),
               _roleCard("Runner", "assets/runner_image.png", "runner"),
@@ -144,14 +138,5 @@ class UserOrRunnerState extends State<UserOrRunner> {
         ),
       ),
     );
-  }
-}
-
-// 模拟跳转页面
-class RunnerLoginPage extends StatelessWidget {
-  const RunnerLoginPage({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(title: const Text("Runner Login")));
   }
 }

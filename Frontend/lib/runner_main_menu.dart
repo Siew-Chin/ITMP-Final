@@ -27,8 +27,10 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Runner: ${widget.studentID}'), // 显示 Runner ID
-        backgroundColor: Colors.blueAccent,
+        title: const Text('To Your Dorm'),
+        backgroundColor: Colors.blue[200],
+        elevation: 0,
+        leading: const Icon(Icons.menu),
       ),
       body: FutureBuilder<List<dynamic>>(
         future: fetchAvailableOrders(),
