@@ -1,19 +1,11 @@
 from flask import Flask, request, jsonify
-<<<<<<< HEAD
-from pymongo import MongoClient  # 导入数据库驱动
-import certifi
-from flask_cors import CORS
-
-app = Flask(__name__)
-CORS(app)
-=======
 from pymongo import MongoClient
 import certifi
+from flask_cors import CORS
 from bson import json_util
 import json
->>>>>>> origin/feature-skx
-
 app = Flask(__name__)
+CORS(app)
 
 # --- 1. 数据库连接 ---
 ca = certifi.where()
@@ -88,7 +80,6 @@ def get_pending_orders():
         return jsonify(parse_json(pending_orders)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-<<<<<<< HEAD
     
 @app.route('/api/orders/<order_id>/complete', methods=['PUT'])
 def complete_order(order_id):
@@ -106,7 +97,7 @@ def complete_order(order_id):
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-=======
+
 # API 10: 加载客户资料
 # ✨ 优化后的 API 10: 获取订单关联的客户详请
 @app.route('/api/order/user_info', methods=['GET'])
@@ -132,7 +123,6 @@ def get_user_info():
         
         return jsonify(res), 200
     return jsonify({"msg": "Not found"}), 404
->>>>>>> origin/feature-skx
 
 # API 12: 确认接单
 @app.route('/api/runner/take', methods=['POST'])
