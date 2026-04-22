@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'parcel_taking_page.dart'; // 已经导入新页面
+import 'parcel_taking_page.dart'; 
+import 'food_delivering_page.dart'; // ✅ 导入刚刚写好的外卖页面
 
 // Parcel or Food Delivery page
 class ParcelOrFood extends StatefulWidget {
@@ -37,7 +38,7 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
               ),
               const SizedBox(height: 20),
 
-              // ✅ Parcel Delivery 卡片 (这里已经改成了正确的新页面)
+              // Parcel Delivery 卡片
               _serviceCard(
                 "Parcel Delivery", 
                 "assets/parcel_image.png", 
@@ -46,11 +47,11 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
 
               const SizedBox(height: 20),
 
-              // Food Delivery 卡片
+              // ✅ Food Delivery 卡片 (现在连到真正的外卖页面了！)
               _serviceCard(
                 "Food Delivery", 
                 "assets/fooddelivery_image.png", 
-                const FoodDelivery()
+                const FoodDeliveringPage() 
               ),
             ],
           ),
@@ -116,11 +117,4 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
       ),
     );
   }
-}
-
-// 暂时的占位页面 (只留下了 FoodDelivery，旧的 ParcelPage 已经彻底删除了)
-class FoodDelivery extends StatelessWidget {
-  const FoodDelivery({super.key});
-  @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text("Food Page")));
 }
