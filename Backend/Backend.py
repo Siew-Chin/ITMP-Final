@@ -3,7 +3,10 @@ from pymongo import MongoClient
 import certifi
 from flask_cors import CORS
 from bson import json_util
+from bson import ObjectId 
 import json
+from datetime import datetime
+
 app = Flask(__name__)
 CORS(app)
 
@@ -15,151 +18,181 @@ client = MongoClient(
 )
 db = client.ITMP_Project
 users_col = db.user_detail 
-orders_col = db.order 
+orders_col = db.order  
 
-def parse_json(data):
-    return json.loads(json_util.dumps(data))
-
-# --- 2. 账号相关接口 (Register/Login/Role) ---
-
-@app.route('/register', methods=['POST'])
-def register():
-    data = request.get_json()
-    if 'student_id' not in data:
-        return jsonify({"message": "Missing student_id"}), 400
-    if users_col.find_one({"student_id": data['student_id']}):
-        return jsonify({"message": "User already exists"}), 400
-    users_col.insert_one(data)
-    return jsonify({"message": "Register success"}), 200
-
+# --- 2. 账号接口 ---
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
-    user = users_col.find_one({"student_id": data['student_id']})
-    if not user or user['password'] != data['password']:
-        return jsonify({"message": "Wrong password"}), 401
-    return jsonify({
-        "message": "Login success",
-        "role": user.get('role', 'student'),
-        "name": user.get('name', 'User')
-    }), 200
-
-@app.route('/api/user/update_role', methods=['POST'])
-def update_role():
-    data = request.get_json()
-    result = users_col.update_one(
-        {"student_id": data.get('student_id')},
-        {"$set": {"role": data.get('role')}}
-    )
-    return jsonify({"msg": "success"}) if result.matched_count > 0 else (jsonify({"msg": "User not found"}), 404)
-
-# --- 3. 订单列表相关接口 ---
-
-# 修改 API 9: 获取待接单列表
-@app.route('/api/orders/pending', methods=['GET'])
-def get_pending_orders():
     try:
-        # 获取所有待接单
-        pending_orders = list(orders_col.find({"status": "pending"}))
-        
-        for order in pending_orders:
-            # 1. 计算价格 (你的阶梯规则)
-            qty = int(order.get('parcel_qty', 0))
-            price = qty * 2.0 if qty < 5 else qty * 1.0
-            order['money_to_receive'] = price # 对应你朋友代码里的 money_to_receive
-
-            # 2. 解决 Dorm: N/A 问题
-            # 拿着订单里的 requester (学号) 去用户表找宿舍
-            cust_id = order.get('requester')
-            user_info = users_col.find_one({"student_id": cust_id}, {"_id": 0})
-            if user_info:
-                order['dorm'] = user_info.get('dorm', "N/A") # 填充宿舍信息
-            else:
-                order['dorm'] = "N/A"
-                
-        return jsonify(parse_json(pending_orders)), 200
+        data = request.get_json()
+        user = users_col.find_one({"student_id": data['student_id']})
+        if not user or user['password'] != data['password']:
+            return jsonify({"message": "Wrong password"}), 401
+        return jsonify({
+            "message": "Login success",
+            "role": user.get('role', 'student'),
+            "name": user.get('name', 'User')
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-@app.route('/api/orders/<order_id>/complete', methods=['PUT'])
-def complete_order(order_id):
+
+# --- 3. 接单接口 (Status 0 -> 1) ---
+@app.route('/api/order/take', methods=['POST'])
+def take_order():
     try:
-        # This searches for the specific order and changes its status to "completed"
+        data = request.json
+        order_id = data.get('order_id')
+        new_status_code = data.get('status', 1) 
+        runner_id = data.get('runner_id')
+
         result = orders_col.update_one(
-            {"order_id": order_id}, 
-            {"$set": {"status": "completed"}}
+            {'_id': ObjectId(order_id)},
+            {'$set': {
+                'status': 'accepted',
+                'status_code': int(new_status_code),
+                'runner_id': runner_id,
+                'taken_at': datetime.now()
+            }}
         )
         
-        if result.modified_count > 0:
-            return jsonify({"message": "Order successfully completed!"}), 200
-        else:
-            return jsonify({"error": "Order not found or already completed"}), 404
-            
+        if result.matched_count > 0:
+            return jsonify({"message": "Success", "msg": "Order accepted"}), 200
+        return jsonify({"message": "Order not found"}), 404
     except Exception as e:
+        return jsonify({"message": "Backend Error", "error": str(e)}), 500
+
+# --- 4. 追踪接口 ---
+@app.route('/api/order/tracking', methods=['GET'])
+def get_order_tracking():
+    order_id = request.args.get('id')
+    try:
+        order = orders_col.find_one({"_id": ObjectId(order_id)})
+        if order:
+            return jsonify({
+                "status_code": order.get("status_code", 1),
+                "order_id": str(order["_id"])
+            }), 200
+        return jsonify({"error": "Not found"}), 404
+    except:
+        return jsonify({"error": "Invalid ID"}), 400
+
+# --- 5. 详情接口 (已补全完整字段并修复 Unknown 问题) ---
+@app.route('/api/order/detail/<order_id>', methods=['GET'])
+def get_order_detail(order_id):
+    try:
+        order = orders_col.find_one({"_id": ObjectId(order_id)})
+        if order:
+            student_id = order.get("requester_id")
+            # 调试打印：如果这里打印的是 "BCD"，请确保 user_detail 里有 student_id 为 "BCD" 的人
+            print(f"DEBUG: Finding user with student_id: {student_id}") 
+            
+            user = users_col.find_one({"student_id": student_id})
+            
+            # 整合订单与用户资料
+            response_data = {
+                "_id": str(order['_id']),
+                "requester_id": user.get("name", "Unknown") if user else "Unknown",
+                "dropoff_point": user.get("dorm", "N/A") if user else order.get("dropoff_point", "N/A"),
+                "requester_contact": user.get("contact", "N/A") if user else order.get("requester_contact", "N/A"),
+                "shop_name": order.get("shop_name", "N/A"),
+                "shopping_list": order.get("shopping_list", []),
+                "delivery_fee": order.get("delivery_fee", 3.0),
+                "status_code": order.get("status_code", 1)
+            }
+            return jsonify(response_data), 200
+        else:
+            return jsonify({"error": "Order not found"}), 404
+    except Exception as e:
+        print(f"Detail Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# API 10: 加载客户资料
-# ✨ 优化后的 API 10: 获取订单关联的客户详请
-@app.route('/api/order/user_info', methods=['GET'])
-def get_user_info():
-    order_id = request.args.get('order_id')
-    order_data = orders_col.find_one({"order_id": order_id}, {"_id": 0})
-    
-    if order_data:
-        # 对应你的 MongoDB 字段: requester
-        cust_id = order_data.get('requester')
-        user_info = users_col.find_one({"student_id": cust_id}, {"_id": 0})
+# --- 6. 更新状态接口 (核心业务逻辑) ---
+@app.route('/api/order/update_status', methods=['POST'])
+def update_status():
+    try:
+        data = request.json
+        # 兼容 order_id 或 id 写入
+        order_id = data.get('order_id') or data.get('id') 
         
-        # 重新计算一次价格确保万无一失
-        qty = int(order_data.get('parcel_qty', 0))
-        total_money = qty * 2.0 if qty < 5 else qty * 1.0
-        
-        # 合并所有数据
-        res = {**order_data, **(user_info or {})}
-        
-        # 💡 强制把 requester 赋值给 'id'，对齐你的 ParcelPage controller
-        res['id'] = cust_id 
-        res['money_to_receive'] = total_money
-        
-        return jsonify(res), 200
-    return jsonify({"msg": "Not found"}), 404
+        if not order_id:
+            return jsonify({"message": "Missing order ID"}), 400
 
-# API 12: 确认接单
-@app.route('/api/runner/take', methods=['POST'])
-def take_order():
-    data = request.get_json()
-    order_id = data.get('order_id')
-    runner_id = data.get('runner_id')
-    
-    result = orders_col.update_one(
-        {"order_id": order_id},
-        {"$set": {"status": "accepted", "runner_id": runner_id}}
-    )
-    
-    if result.matched_count > 0:
-        return jsonify({"msg": "Order accepted"}), 200
-    else:
-        return jsonify({"msg": "Order not found"}), 404
-    
-@app.route('/api/runner/dropped', methods=['POST'])
-def update_to_dropped():
-    data = request.json
-    order_id = data.get('order_id')
-    
-    if not order_id:
-        return jsonify({"msg": "Missing order_id"}), 400
-        
-    # 将订单状态改为 dropped
-    result = orders_col.update_one(
-        {"order_id": order_id},
-        {"$set": {"status": "dropped"}}
-    )
-    
-    if result.modified_count > 0:
-        return jsonify({"msg": "Status updated to dropped"}), 200
-    return jsonify({"msg": "Order not found"}), 404
+        # 确保转为 int，防止前端传字符串导致逻辑错误
+        try:
+            new_status_code = int(data.get('status_code'))
+        except (TypeError, ValueError):
+            return jsonify({"message": "Invalid status_code"}), 400
 
-# --- 4. 启动函数 (必须放在最后面！) ---
+        amount = data.get('amount', "")
+
+        # 构建更新字典
+        update_fields = {'status_code': new_status_code}
+        
+        if amount:
+            update_fields['receipt_amount'] = amount
+            
+        # 状态描述映射
+        status_map = {
+            1: "Accepted",      # 刚接单
+            2: "Picking-up",    # 正在去店里
+            3: "Picked-up",     # 已取货
+            4: "Completed"      # 已送达
+        }
+        
+        if new_status_code in status_map:
+            update_fields['status'] = status_map[new_status_code]
+
+        # 如果是状态 4，记录完成时间
+        if new_status_code == 4:
+            update_fields['completed_at'] = datetime.now()
+
+        # 执行数据库更新
+        result = orders_col.update_one(
+            {'_id': ObjectId(order_id)},
+            {'$set': update_fields}
+        )
+
+        if result.matched_count > 0:
+            print(f"Success: Order {order_id} status updated to {new_status_code}")
+            return jsonify({
+                "message": "Status updated", 
+                "current_status_code": new_status_code
+            }), 200
+        else:
+            return jsonify({"message": "Order not found"}), 404
+            
+    except Exception as e:
+        print(f"Update Status Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# --- 7. 市场列表接口 ---
+@app.route('/api/runner/market', methods=['GET'])
+def get_runner_market():
+    try:
+        # 只展示 status_code 为 0 (待接单) 的任务
+        tasks = list(orders_col.find({"status_code": 0}))
+        
+        formatted_tasks = []
+        for task in tasks:
+            task['_id'] = str(task['_id']) # 强制转字符串防止红屏
+            
+            # 时间格式化处理
+            if 'created_at' in task and isinstance(task['created_at'], datetime):
+                task['created_at'] = task['created_at'].isoformat()
+            else:
+                task['created_at'] = datetime.now().isoformat()
+
+            # 确保费用有默认值
+            if 'total_price' not in task:
+                task['total_price'] = task.get('delivery_fee', 3.0)
+            
+            formatted_tasks.append(task)
+                
+        return jsonify(formatted_tasks), 200
+    except Exception as e:
+        print(f"Market Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
-    # host='0.0.0.0' 让你的安卓模拟器能通过 10.0.2.2 访问
+    # host='0.0.0.0' 允许模拟器通过 10.0.2.2 访问
     app.run(debug=True, host='0.0.0.0', port=5000)
