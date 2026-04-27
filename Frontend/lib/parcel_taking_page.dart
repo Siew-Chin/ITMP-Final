@@ -56,7 +56,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue[50], 
+      backgroundColor: Color(0xFFF5F7FA), 
       appBar: AppBar(
         title: const Text(
           'Parcel Order',

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
-import 'userOrRunner_page.dart';
+import 'service_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+
+final baseUrl = kIsWeb
+    ? 'http://127.0.0.1:5000'   // Chrome
+    : 'http://10.0.2.2:5000';   // Emulator
 
 // 1. 独立安全性：包含 main 函数和 MyApp，确保可以直接运行调试
 void main() {
@@ -58,7 +63,7 @@ class LoginState extends State<Login> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => UserOrRunner(studentID: sID),
+            builder: (context) => ServicePage(studentID: sID),
           ),
         );
       } else {
@@ -87,7 +92,8 @@ class LoginState extends State<Login> {
       decoration: InputDecoration(
         labelText: title,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide.none,
         ),
         filled: true,
         fillColor: Colors.white,
@@ -98,15 +104,26 @@ class LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('To Your Dorm'),
-        backgroundColor: Colors.blue[200],
-        elevation: 0,
-        leading: const Icon(Icons.menu),
-      ),
-      backgroundColor: Colors.blue[50],
+      
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+            Color(0xFFEAF3FF), // 很浅蓝
+            Color(0xFFD6E8FF), // 中浅蓝
+            Color(0xFFBFD9FF), // 柔蓝
+            ],
+          )
+        ),
       // 2. 布局安全：使用 SingleChildScrollView 包装，防止键盘弹出时溢出
-      body: SingleChildScrollView(
+      child: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height,
+          ),
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(50),
@@ -116,24 +133,38 @@ class LoginState extends State<Login> {
                 // Logo
                 Image.asset(
                   "assets/logo.png",
-                  height: 350,
+                  height: 400,
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 20),
-                _entryField('Student ID', _controllerStudentID),
+                _entryField(
+                  "Student ID", _controllerStudentID),
                 const SizedBox(height: 10),
-                _entryField('Password', _controllerPassword, isPassword: true),
-                
+                _entryField("Password", _controllerPassword, isPassword: true),
                 // Login button
                 Padding(
                   padding: const EdgeInsets.all(28.0),
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      child: const Text("Login"),
-                      onPressed: () {
-                        loginUser(); // 调用联网函数
-                      },
+                        onPressed: () {loginUser(); // 调用联网函数
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C8EF5),
+                          foregroundColor: Colors.white,
+                          padding:EdgeInsets.symmetric(vertical: 16),
+                          elevation: 5,
+                          shadowColor: Colors.blue.withOpacity(0.3),
+                          shape:RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                        ),                      
+                        child: const Text(
+                        "Login",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ),
@@ -159,19 +190,21 @@ class LoginState extends State<Login> {
                       child: const Text(
                         "Register",
                         style: TextStyle(
-                          color: Colors.blue,
+                          color: Color(0xFF6C8EF5),
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                            ),
+                          ),
+                        )
+                      ],
                     )
-                  ],
-                )
-              ],
-            ),
-          ),
-        ),
-      ),
+                  ]
+                ),
+              ),
+            )
+          )
+        )
+      )
     );
   }
 }

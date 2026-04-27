@@ -60,10 +60,10 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: Color(0xFFF5F7FA),
       appBar: AppBar(
         title: Text('Runner: ${widget.studentID}'),
-        backgroundColor: const Color(0xFF87CEEB),
+        backgroundColor: Colors.blue[200],
         elevation: 0,
         foregroundColor: Colors.black87,
         // ✨ 在右上角添加注销按钮
@@ -90,8 +90,32 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 if (allOrders.isEmpty)
-                  const SliverFillRemaining(
-                    child: Center(child: Text('No available orders right now.')),
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inbox, size: 80, color: Colors.grey),
+                          SizedBox(height: 10),
+                          Text('No order yet 😴'),
+                          Text("Relax or check back later!"),
+
+                          SizedBox(height:20),
+
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {}); // 刷新页面
+                            },
+                            child: const Text("Refresh"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey[200],
+                              foregroundColor: Colors.grey,
+                              textStyle: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   )
                 else
                   SliverList(

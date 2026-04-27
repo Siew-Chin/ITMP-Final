@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import 'runner_payment_confirm_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,9 +10,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Login(),
+      home: RunnerPaymentConfirmPage(studentID:"test123", amount:3.00, customerName: "ABC", customerContact: "123", customerStudentID: "ABC",),
     );
   }
 }

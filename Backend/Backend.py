@@ -53,6 +53,24 @@ def update_role():
     )
     return jsonify({"msg": "success"}) if result.matched_count > 0 else (jsonify({"msg": "User not found"}), 404)
 
+# Update User Info API (for Edit Profile Page)
+@app.route('/api/user/update_info', methods=['POST'])
+def update_user_profile():
+    data = request.get_json()
+    student_id = data.get('student_id')
+
+    result = users_col.update_one(
+        {"student_id": student_id},
+        {"$set": {
+            "name": data.get('name'),
+            "password": data.get('password'),
+            "contact": data.get('contact'),
+            "dorm": data.get('dorm'),
+        }}
+    )
+    return jsonify({"msg": "Profile updated"}) if result.matched_count > 0 else (jsonify({"msg": "User not found"}), 404)
+
+
 # --- 3. 订单列表相关接口 ---
 
 # 修改 API 9: 获取待接单列表

@@ -54,7 +54,7 @@ class ActiveDeliveryPage extends StatelessWidget {
     String type = (order['type'] ?? 'parcel').toString();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: Color(0xFFF5F7FA),
       appBar: AppBar(
         title: const Text('Active Delivery'),
         backgroundColor: const Color(0xFF87CEEB),
