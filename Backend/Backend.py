@@ -191,9 +191,6 @@ def get_runner_market():
         print(f"Market Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-
-
 def parse_json(data):
     return json.loads(json_util.dumps(data))
 
