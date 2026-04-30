@@ -3,9 +3,19 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  connectivity_plus
+  desktop_drop
+  file_selector_windows
+  gal
+  media_kit_video
+  record_windows
+  share_plus
+  thumblr_windows
+  url_launcher_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
+  jni
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

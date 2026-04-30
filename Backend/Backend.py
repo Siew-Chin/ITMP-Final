@@ -31,6 +31,68 @@ def login():
             "role": user.get('role', 'student'),
             "name": user.get('name', 'User')
         }), 200
+    data = request.get_json()
+    user = users_col.find_one({"student_id": data['student_id']})
+    if not user or user['password'] != data['password']:
+        return jsonify({"message": "Wrong password"}), 401
+    return jsonify({
+        "message": "Login success",
+        "role": user.get('role', 'student'),
+        "name": user.get('name', 'User')
+    }), 200
+
+@app.route('/api/user/update_role', methods=['POST'])
+def update_role():
+    data = request.get_json()
+    result = users_col.update_one(
+        {"student_id": data.get('student_id')},
+        {"$set": {"role": data.get('role')}}
+    )
+    return jsonify({"msg": "success"}) if result.matched_count > 0 else (jsonify({"msg": "User not found"}), 404)
+
+# Update User Info API (for Edit Profile Page)
+@app.route('/api/user/update_info', methods=['POST'])
+def update_user_profile():
+    data = request.get_json()
+    student_id = data.get('student_id')
+
+    result = users_col.update_one(
+        {"student_id": student_id},
+        {"$set": {
+            "name": data.get('name'),
+            "password": data.get('password'),
+            "contact": data.get('contact'),
+            "dorm": data.get('dorm'),
+        }}
+    )
+    return jsonify({"msg": "Profile updated"}) if result.matched_count > 0 else (jsonify({"msg": "User not found"}), 404)
+
+
+# --- 3. 订单列表相关接口 ---
+
+# 修改 API 9: 获取待接单列表
+@app.route('/api/orders/pending', methods=['GET'])
+def get_pending_orders():
+    try:
+        # 获取所有待接单
+        pending_orders = list(orders_col.find({"status": "pending"}))
+        
+        for order in pending_orders:
+            # 1. 计算价格 (你的阶梯规则)
+            qty = int(order.get('parcel_qty', 0))
+            price = qty * 2.0 if qty < 5 else qty * 1.0
+            order['money_to_receive'] = price # 对应你朋友代码里的 money_to_receive
+
+            # 2. 解决 Dorm: N/A 问题
+            # 拿着订单里的 requester (学号) 去用户表找宿舍
+            cust_id = order.get('requester')
+            user_info = users_col.find_one({"student_id": cust_id}, {"_id": 0})
+            if user_info:
+                order['dorm'] = user_info.get('dorm', "N/A") # 填充宿舍信息
+            else:
+                order['dorm'] = "N/A"
+                
+        return jsonify(parse_json(pending_orders)), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

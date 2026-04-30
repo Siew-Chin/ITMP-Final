@@ -21,7 +21,7 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
         elevation: 0,
         leading: const Icon(Icons.menu),
       ),
-      backgroundColor: Colors.blue[50],
+      backgroundColor: Color(0xFFF5F7FA),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -33,8 +33,12 @@ class ParcelOrFoodState extends State<ParcelOrFood> {
                 style: const TextStyle(fontSize: 16, color: Colors.blueGrey),
               ),
               const Text(
-                "Services", 
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                "What do you need today?", 
+                style: TextStyle(
+                  fontSize: 26, 
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
               const SizedBox(height: 20),
 

@@ -71,65 +71,102 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     }
   }
 
+  // 1. 修复注销函数缺失问题
+  void _handleLogout() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        // 修复：studentID 改为 runnerId (根据你的类定义)
+        title: Text('Runner: ${widget.runnerId}'),
+        backgroundColor: Colors.blue[200],
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _handleLogout,
+            tooltip: 'Logout',
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildEarningsCard(),
-                const SizedBox(height: 30),
-
-                _buildSectionHeader("Current Tasks", currentTasks.length),
-                const SizedBox(height: 10),
-                currentTasks.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.only(left: 5, top: 10),
-                        child: Text(
-                          "No active tasks.",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      )
-                    : Column(
-                        children: currentTasks
-                            .map((t) => _buildTaskCard(t, isActive: true))
-                            .toList(),
-                      ),
-
-                const SizedBox(height: 30),
-
-                _buildSectionHeader("Tasks Available", availableTasks.length),
-                const SizedBox(height: 10),
-                availableTasks.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.only(left: 5, top: 10),
-                        child: Text(
-                          "Market is empty.",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      )
-                    : Column(
-                        children: availableTasks
-                            .map((t) => _buildTaskCard(t))
-                            .toList(),
-                      ),
-              ],
+        ],
+      ),
+      // 使用 Caryn 的 CustomScrollView 作为主结构，这样可以滚动且支持下拉刷新
+      body: RefreshIndicator(
+        onRefresh: _fetchDashboardData,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // 2. 将你的收益卡片放入 Sliver 中
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildEarningsCard(),
+                    const SizedBox(height: 20),
+                    _buildSectionHeader("Current Active Tasks", currentTasks.length),
+                  ],
+                ),
+              ),
             ),
-          ),
+
+            // 3. 渲染你手头正在做的任务 (Active Tasks)
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildTaskCard(currentTasks[index], isActive: true),
+                ),
+                childCount: currentTasks.length,
+              ),
+            ),
+
+            // 4. 任务大厅标题
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                child: _buildSectionHeader("Market Available", availableTasks.length),
+              ),
+            ),
+
+            // 5. 渲染大厅里的任务
+            availableTasks.isEmpty
+                ? const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: Text("No order yet 😴")),
+                  )
+                : SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final order = availableTasks[index];
+                        // 这里使用了 Caryn 的卡片逻辑或你原本的 _buildTaskCard
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _buildTaskCard(order),
+                        );
+                      },
+                      childCount: availableTasks.length,
+                    ),
+                  ),
+
+            // 底部提示
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 30),
+                child: Center(
+                  child: Text(
+                    "Swipe down to refresh orders",
+                    style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
