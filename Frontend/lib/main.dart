@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import 'main_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,9 +10,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Login(),
+      theme: ThemeData(primarySwatch: Colors.blue),
+      // The app now starts with the Navigation Bar logic
+      home: const MainScreen(studentId: "FIT2508099"),
     );
   }
 }
