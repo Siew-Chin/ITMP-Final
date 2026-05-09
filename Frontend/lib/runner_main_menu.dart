@@ -7,6 +7,8 @@ import 'dart:async';
 import 'drive_detail_page.dart';
 import 'parcel_detail_page.dart';
 import 'food_detail_page.dart';
+import 'runner_groceryorder.dart';
+import 'runner_deliverytake.dart';
 
 //12
 class RunnerMainMenu extends StatefulWidget {
@@ -61,9 +63,17 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
 
       if (mounted) {
         setState(() {
-          totalEarnings = jsonDecode(earnRes.body)['Total earning'].toDouble();
-          availableTasks = jsonDecode(marketRes.body);
-          currentTasks = jsonDecode(currentRes.body);
+          final earnData = jsonDecode(earnRes.body);
+          final marketData = jsonDecode(marketRes.body);
+          final currentData = jsonDecode(currentRes.body);
+
+          availableTasks = marketData is List ? marketData : [];
+          currentTasks = currentData is List ? currentData : [];
+
+          totalEarnings =
+              double.tryParse(
+                earnData['total_earning'].toString(),
+              ) ?? 0.0;
         });
       }
     } catch (e) {
@@ -144,7 +154,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final order = availableTasks[index];
-                        // 这里使用了 Caryn 的卡片逻辑或你原本的 _buildTaskCard
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: _buildTaskCard(order),
@@ -177,12 +186,12 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
       width: double.infinity,
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
+        color: Colors.white.withValues(alpha:0.8),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: Colors.white),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha:0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -220,7 +229,7 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.blueAccent.withOpacity(0.2),
+            color: Colors.blueAccent.withValues(alpha:0.2),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(
@@ -238,30 +247,54 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
   Widget _buildTaskCard(Map task, {bool isActive = false}) {
     // 1. Determine Icon based on type
     IconData iconData;
-    String type = task['type'] ?? 'Item';
+    String type =
+    (task['type'] ?? 'item')
+    .toString()
+    .toLowerCase();
 
-    if (type == 'Drive') {
-      iconData = Icons.directions_car_rounded;
-    } else if (type == 'Food') {
-      iconData = Icons.fastfood_rounded;
+    Color iconColor;
+
+    if (type == 'drive' || type == 'ride') {
+      iconData = Icons.local_taxi_rounded;
+      iconColor = Colors.orange;
+
+    } else if (type == 'food') {
+      iconData = Icons.ramen_dining_rounded;
+      iconColor = Colors.redAccent;
+
+    } else if (type == 'grocery') {
+      iconData = Icons.shopping_cart_rounded;
+      iconColor = Colors.green;
+
+    } else if (type == 'item') {
+      iconData = Icons.inventory_2_rounded;
+      iconColor = Colors.deepPurple;
+
     } else {
-      iconData = Icons.inventory_2_rounded; // Default for Item/Parcel
+      iconData = Icons.local_shipping_rounded;
+      iconColor = Colors.blueAccent;
     }
-
     return GestureDetector(
       onTap: () {
         Widget destination;
 
         // Change 'Driving' to 'Drive' to match your MongoDB screenshot
-        if (type == 'Drive') {
+        String type = (task['type'] ?? 'item').toString().toLowerCase();
+
+        if (type == 'drive' || type == 'ride') {
           destination = DriveDetailPage(order: task, runnerId: widget.runnerId);
-        } else if (type == 'Food') {
+
+        } else if (type == 'food') {
           destination = FoodDetailPage(order: task, runnerId: widget.runnerId);
+
+        } else if (type == 'grocery') {
+          destination = RunnerGroceryOrder(order: task, runnerId: widget.runnerId);
+
+        } else if (type == 'item') {
+          destination = RunnerDeliveryTake(order: task, runnerId: widget.runnerId);
+
         } else {
-          destination = ParcelDetailPage(
-            order: task,
-            runnerId: widget.runnerId,
-          );
+          destination = ParcelDetailPage(order: task, runnerId: widget.runnerId);
         }
 
         Navigator.push(
@@ -273,12 +306,12 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.75),
+          color: Colors.white.withValues(alpha:0.75),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: Colors.white),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha:0.03),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -289,10 +322,10 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blueAccent.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(15),
               ),
-              child: Icon(iconData, color: Colors.blueAccent, size: 28),
+              child: Icon(iconData, color: iconColor, size: 28),
             ),
             const SizedBox(width: 15),
             Expanded(
@@ -307,7 +340,9 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                     ),
                   ),
                   Text(
-                    task['pickup_point'] ?? "Location hidden",
+                    (task['pickup_point']?.toString().isNotEmpty ?? false)
+                    ? task['pickup_point']
+                    : "Location hidden",
                     style: const TextStyle(color: Colors.grey, fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -318,17 +353,75 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  "RM ${task['total_price']}",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
-                    fontSize: 16,
+
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    "+ RM ${double.tryParse(task['runner_profit'].toString())?.toStringAsFixed(2) ?? '0.00'}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  "Collect RM ${double.tryParse(task['total_to_collect'].toString())?.toStringAsFixed(2) ?? '0.00'}",
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                ),
+
+                if (task['is_urgent'] == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bolt,
+                            size: 12,
+                            color: Colors.red,
+                          ),
+
+                          SizedBox(width: 4),
+
+                          Text(
+                            "URGENT",
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 if (isActive)
                   const Padding(
-                    padding: EdgeInsets.only(top: 4),
+                    padding: EdgeInsets.only(top: 6),
                     child: Text(
                       "ACTIVE",
                       style: TextStyle(
@@ -339,7 +432,7 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                     ),
                   ),
               ],
-            ),
+            )
           ],
         ),
       ),

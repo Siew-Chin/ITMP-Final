@@ -1,3 +1,4 @@
+//17
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -6,8 +7,11 @@ import 'active_drive_task_page.dart';
 class DriveDetailPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
-  const DriveDetailPage({Key? key, required this.order, required this.runnerId})
-    : super(key: key);
+  const DriveDetailPage({
+    Key? key, 
+    required this.order, 
+    required this.runnerId})
+      : super(key: key);
 
   @override
   State<DriveDetailPage> createState() => _DriveDetailPageState();
@@ -15,48 +19,105 @@ class DriveDetailPage extends StatefulWidget {
 
 class _DriveDetailPageState extends State<DriveDetailPage> {
   bool isDetailsConfirmed = false;
+  Map<String, dynamic>? detailedOrder;
+  bool isLoading = true;
+
+  double _parsePrice(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrderDetails();
+  }
+
+  Future<void> _fetchOrderDetails() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}',
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        setState(() {
+          detailedOrder = jsonDecode(response.body);
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Fetch Error: $e");
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   Future<void> _takeOrder() async {
-    // Line 20: Path changed to match API 5 from the list
     final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
-
     try {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.order['order_id'],
-          "next_status":
-              1, // Using 'next_status' as defined in teammate's API list
+          "status_code": 1, 
           "runner_id": widget.runnerId,
         }),
       );
+
+      debugPrint("Response Status: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
+
       if (response.statusCode == 200) {
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => ActiveDriveTaskPage(
-              order: widget.order,
+              order: detailedOrder ?? widget.order,
               runnerId: widget.runnerId,
             ),
           ),
         );
       }
     } catch (e) {
-      debugPrint("Error: $e");
+      debugPrint("Take Order Error: $e");
     }
   }
 
+ 
   @override
   Widget build(BuildContext context) {
+    double runnerProfit = _parsePrice(
+      detailedOrder?['runner_profit'] ?? widget.order['runner_profit'],
+    );
+
+    double totalToCollect = _parsePrice(
+      detailedOrder?['total_to_collect'] ?? widget.order['total_to_collect'],
+    );
+
+    bool isUrgent =
+        detailedOrder?['is_urgent'] ?? widget.order['is_urgent'] ?? false;
+        
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
-      ),
+        backgroundColor: Colors.transparent, 
+        elevation: 0, 
+        iconTheme: const IconThemeData(color: Colors.black87),),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -68,14 +129,16 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
           ),
         ),
         child: SafeArea(
-          bottom: false,
-          child: SingleChildScrollView(
+          bottom: false, // Fix: Allow gradient to bleed into the bottom navigation area
+          child: isLoading 
+            ? const Center(child: CircularProgressIndicator()) // 增加 Loading 显示
+            : SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
             child: Column(
               children: [
                 const SizedBox(height: 10),
                 const Text(
-                  "Drive Detail",
+                  "Ride Details",
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -91,7 +154,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
                     borderRadius: BorderRadius.circular(35),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha:0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -102,37 +165,75 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
                     children: [
                       _row(
                         Icons.person,
-                        "Passenger",
-                        widget.order['customer_name']?.toString() ?? "BCD",
+                        "Customer",
+                        (detailedOrder?['customer_name'] ?? widget.order['customer_name'] ?? "Loading...")
                       ),
                       const SizedBox(height: 10),
                       _row(
                         Icons.phone,
                         "Contact",
-                        widget.order['requester_contact']?.toString() ?? "123",
+                        (detailedOrder?['requester_contact'] ?? widget.order['requester_contact'] ?? "123"),
                       ),
                       const Divider(height: 30, color: Colors.black12),
                       _row(
-                        Icons.directions_car,
-                        "Pick-up",
-                        widget.order['pickup_point']?.toString() ??
-                            "Library L2",
+                        Icons.location_on,
+                        "Pickup Point",
+                        (detailedOrder?['pickup_point']
+                            ?? widget.order['pickup_point']
+                            ?? "Unknown Location"),
                       ),
                       const SizedBox(height: 10),
                       _row(
-                        Icons.location_on,
-                        "Drop-off",
-                        widget.order['dropoff_point']?.toString() ??
-                            "Kipmall Sunsuria",
+                        Icons.home,
+                        "Dropoff Location",
+                        (detailedOrder?['dropoff_point'] ?? widget.order['dropoff_point'] ?? "Unknow Location"),
                       ),
                       const Divider(height: 30, color: Colors.black12),
+                      const Text(
+                        "Ride Details:",
+                        style: TextStyle(
+                          color: Colors.black45,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        (detailedOrder?['ride_details'] ?? widget.order['ride_details'] ?? "No details available"),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF333333),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      // --- Pricing Section ---
+
                       _row(
-                        Icons.account_balance_wallet,
-                        "Your Earning",
-                        "RM ${widget.order['delivery_fee']?.toString() ?? '8.0'}",
+                        Icons.attach_money,
+                        "Your Profit",
+                        "RM ${runnerProfit.toStringAsFixed(2)}",
+                      ),
+
+                      if (isUrgent)
+                        const SizedBox(height: 10),
+
+                      if (isUrgent)
+                        _row(
+                          Icons.bolt,
+                          "Urgent Included",
+                          "YES",
+                        ),
+
+                      const Divider(height: 30, color: Colors.black12),
+
+                      _row(
+                        Icons.payments,
+                        "Total To Collect",
+                        "RM ${totalToCollect.toStringAsFixed(2)}",
                       ),
                       const SizedBox(height: 25),
-                      _noteBox(),
+                      _noteBox(totalToCollect),
                       const SizedBox(height: 20),
                       _checkboxArea(),
                     ],
@@ -140,7 +241,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
                 ),
                 const SizedBox(height: 40),
                 _btn(),
-                const SizedBox(height: 40),
+                const SizedBox(height: 40), // Bottom padding for clean look
               ],
             ),
           ),
@@ -149,44 +250,39 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
     );
   }
 
-  Widget _noteBox() {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.blueAccent.withOpacity(0.15)),
+   Widget _noteBox(double collectAmount) {
+  return Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.red.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(
+        color: Colors.redAccent.withValues(alpha: 0.15),
       ),
-      child: const Text(
-        "Note: Please verify the passenger identity. Drive safely and follow traffic rules. Collect payment at the end of the ride.",
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.blueAccent,
-          fontWeight: FontWeight.w500,
-        ),
+    ),
+    child: Text(
+      "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery.",
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.redAccent,
+        fontWeight: FontWeight.w500,
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _row(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: const Color(0xFF4A90E2), size: 22),
-        const SizedBox(width: 12),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.black45, fontSize: 15),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: Color(0xFF333333),
-          ),
-        ),
-      ],
+  Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF6C8EF5), size: 20),
+          const SizedBox(width: 10),
+          Text(label, style: const TextStyle(color: Colors.black54)),
+          const Spacer(),
+          Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: valueColor ?? Colors.black87)),
+        ],
+      ),
     );
   }
 
@@ -199,7 +295,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
       child: CheckboxListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 10),
         title: const Text(
-          "I confirm I can take this ride",
+          "I have read the details",
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
         value: isDetailsConfirmed,
@@ -221,7 +317,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
       ),
       onPressed: isDetailsConfirmed ? _takeOrder : null,
       child: const Text(
-        "Accept Ride",
+        "Take Order",
         style: TextStyle(
           color: Colors.white,
           fontSize: 18,

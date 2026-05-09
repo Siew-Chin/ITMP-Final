@@ -1,30 +1,14 @@
 import 'package:flutter/material.dart';
 import 'register_page.dart';
-import 'service_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'service_page.dart'; 
 
 final baseUrl = kIsWeb
     ? 'http://127.0.0.1:5000'   // Chrome
     : 'http://10.0.2.2:5000';   // Emulator
 
-// 1. 独立安全性：包含 main 函数和 MyApp，确保可以直接运行调试
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Login(),
-    );
-  }
-}
 
 // Login Page
 class Login extends StatefulWidget {
@@ -107,7 +91,7 @@ class LoginState extends State<Login> {
       
       body: Container(
         width: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -152,9 +136,9 @@ class LoginState extends State<Login> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF6C8EF5),
                           foregroundColor: Colors.white,
-                          padding:EdgeInsets.symmetric(vertical: 16),
+                          padding:const EdgeInsets.symmetric(vertical: 16),
                           elevation: 5,
-                          shadowColor: Colors.blue.withOpacity(0.3),
+                          shadowColor: const Color(0xFF6C8EF5).withValues(alpha:0.3),
                           shape:RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
                           ),

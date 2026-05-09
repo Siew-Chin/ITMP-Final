@@ -1,254 +1,404 @@
+//10
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'tracking_delivery_page.dart';
+import 'waiting_page.dart';
 
 class ItemDeliveryPage extends StatefulWidget {
-  final String studentId;
-  const ItemDeliveryPage({Key? key, required this.studentId}) : super(key: key);
+  final String studentID;
+  const ItemDeliveryPage({
+    super.key,required this.studentID
+    });
 
   @override
-  _ItemDeliveryPageState createState() => _ItemDeliveryPageState();
-}
+  State<ItemDeliveryPage> createState() => _ItemDeliveryPageState();
+  }
 
 class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
-  final TextEditingController _qtyController = TextEditingController();
-  final TextEditingController _itemDescController = TextEditingController();
+  int parcel_qty = 1;
   final TextEditingController _pickupController = TextEditingController();
-  final TextEditingController _dropoffController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
-  bool isUrgent = false;
+  final TextEditingController _dropOffController = TextEditingController();
+  final TextEditingController _detailsController = TextEditingController();
+  bool _isPickupDorm = false;
+  bool _isDropOffDorm = false;
+  bool _isUrgent = false;
 
-  // --- VALIDATION & API CALL ---
-  Future<void> _createOrder() async {
-    // 1. Check for empty fields
-    if (_qtyController.text.isEmpty ||
-        _itemDescController.text.isEmpty ||
-        _pickupController.text.isEmpty ||
-        _dropoffController.text.isEmpty) {
-      _showErrorDialog("Please fill up all information before ordering!");
+  // --- 核心计算逻辑 ---
+  double get _runnerProfit {
+  double basePrice = 0.0;
+  if (parcel_qty <= 5) {
+    basePrice = parcel_qty * 2.0;
+  } else {
+    basePrice = (5 * 2.0) + ((parcel_qty - 5) * 1.5);
+  }
+  
+  return _isUrgent ? basePrice + 1.0 : basePrice;
+}
+
+  void _incrementQuantity() {
+    setState(() {
+      if (parcel_qty < 10) parcel_qty++;
+    });
+  }
+
+  void _decrementQuantity() {
+    setState(() {
+      if (parcel_qty > 1) parcel_qty--;
+    });
+  }
+  double get _totalToCollect {
+    return _runnerProfit;
+  }
+
+  Future<void> _handleOrderNow() async {
+    if (!_isPickupDorm && _pickupController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Please enter a Pick Up Point or select Pickup from Dorm",
+          ),
+        ),
+      );
       return;
     }
 
-    final url = Uri.parse('http://10.0.2.2:5000/api/item/create'); // API 16
+    // 校验 Drop Off Point
+    if (!_isDropOffDorm && _dropOffController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Please enter a Drop Off Point or select Deliver to Dorm",
+          ),
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
 
     try {
       final response = await http.post(
-        url,
+        Uri.parse('http://10.0.2.2:5000/api/ride/create'),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "student_id": widget.studentId,
-          "parcel_qty": _qtyController.text,
-          "item_description": _itemDescController.text,
-          "pickup_point": _pickupController.text,
-          "dropoff_point": _dropoffController.text,
-          "notes": _notesController.text,
-          "urgent": isUrgent,
-          "total_price": 5.0,
-        }),
-      );
+        body: json.encode({
+          "requester_id": widget.studentID,
+          "type": "Item",
+          "is_urgent": _isUrgent,
 
-      if (response.statusCode == 201) {
-        final orderId = jsonDecode(response.body)['order_id'];
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TrackingDeliveryPage(orderId: orderId),
-          ),
-        );
+          "item_price": 0,
+          "runner_profit": _runnerProfit,
+          "total_to_collect": _totalToCollect,
+
+          "pickup_point": _pickupController.text,
+          "dropoff_point": _dropOffController.text,
+          "_isPickupDorm": _isPickupDorm,
+          "_isDropOffDorm": _isDropOffDorm,
+          
+          "item_details": _detailsController.text,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final String? serverOrderId = data['order_id']?.toString();
+
+        if (serverOrderId != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WaitingPage(
+                orderId: serverOrderId,
+                studentID: widget.studentID,
+                totalPrice: _totalToCollect,
+                targetPage: TrackingDeliveryPage(
+                  orderId: serverOrderId,
+                  studentID: widget.studentID,
+                  totalPrice: _totalToCollect,
+                ),
+              ),
+            ),
+          );
+        }
       } else {
-        _showErrorDialog("Failed to create order. Please try again.");
+        throw Exception("Server Error");
       }
     } catch (e) {
-      _showErrorDialog("Connection Error: Make sure your backend is running.");
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Order failed: $e")));
     }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Invalid Order"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFFF5F7FA), 
       appBar: AppBar(
         title: const Text(
-          "Item Delivery",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          'Item Delivering', // 标题
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(25),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInputLabel("Quantity & Item Name"),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: _buildField(_qtyController, Icons.numbers, "Qty"),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 5,
-                      child: _buildField(
-                        _itemDescController,
-                        Icons.inventory_2,
-                        "Item Description",
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                _buildInputLabel("Pick-up Point"),
-                _buildField(
-                  _pickupController,
-                  Icons.location_on,
-                  "Enter location",
-                ),
-                const SizedBox(height: 20),
-                _buildInputLabel("Drop-off Point"),
-                _buildField(_dropoffController, Icons.flag, "Enter location"),
-                const SizedBox(height: 20),
-                _buildInputLabel("Notes"),
-                _buildField(
-                  _notesController,
-                  Icons.edit_note,
-                  "Any extra info?",
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 30),
-                _buildPriceCard(),
-                const SizedBox(height: 40),
-                _buildOrderButton(),
-              ],
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 1. 数量选择区域
+            const Text(
+              "How many item you want to deliver?",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-          ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Icon(Icons.inventory_2_outlined, color: Colors.blueGrey),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, color: Colors.blue),
+                        onPressed: _decrementQuantity,
+                      ),
+                      Text(
+                        '$parcel_qty',
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 5),
+                      const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), // 结尾写着pcs
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                        onPressed: _incrementQuantity,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 25),
+            // --- Pickup Section ---
+            _buildSectionTitle("Pickup Point"),
+            _buildLocationCard(
+              controller: _pickupController,
+              hint: "e.g. Library Entrance",
+              icon: Icons.location_on_outlined,
+              checkLabel: "Pick up from Dorm",
+              isCheck: _isPickupDorm,
+              onCheckChanged: (val) {
+                setState(() {
+                  _isPickupDorm = val ?? false;
+                  if (_isPickupDorm) {
+                    _pickupController.clear();
+                    _isDropOffDorm = false;
+                  }
+                });
+              },
+            ),
+
+            const SizedBox(height: 25),
+
+            // --- Dropoff Section ---
+            _buildSectionTitle("Drop Off Point"),
+            _buildLocationCard(
+              controller: _dropOffController,
+              hint: "e.g. Faculty of Engineering",
+              icon: Icons.flag_outlined,
+              checkLabel: "Drop off at Dorm",
+              isCheck: _isDropOffDorm,
+              onCheckChanged: (val) {
+                setState(() {
+                  _isDropOffDorm = val ?? false;
+                  if (_isDropOffDorm) {
+                    _dropOffController.clear();
+                    _isPickupDorm = false;
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: 25),
+            
+            _buildSectionTitle("Any details? (Optional)"),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              decoration: _cardDecoration(),
+              child: TextField(
+                controller: _detailsController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: "e.g. I'm wearing a red shirt.",
+                  hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // Urgent 
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.red[50], // 用浅红色突出 Urgent
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+              ),
+              child: CheckboxListTile(
+                title: const Text(
+                  "Urgent (+RM 1.00 surcharge)",
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+                value: _isUrgent,
+                activeColor: Colors.red,
+                checkColor: Colors.white,
+                controlAffinity: ListTileControlAffinity.leading,
+                onChanged: (bool? value) {
+                  setState(() {
+                    _isUrgent = value ?? false;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 25),
+
+            // price card
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Colors.blue]),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(color: Colors.blue.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Total to Pay",
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    "RM ${_totalToCollect.toStringAsFixed(2)}",
+                    style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // 5. Notes 公告栏
+            // --- Info Note ---
+            _buildNote(),
+
+            const SizedBox(height: 30),
+
+            // Order Now
+            Align(
+              alignment: Alignment.bottomRight,
+              child: ElevatedButton.icon(
+                onPressed: _handleOrderNow,
+                icon: const Icon(Icons.send_rounded),
+                label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  elevation: 5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );
   }
+    Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+    );
+  }
 
-  // --- UI HELPERS ---
-  Widget _buildInputLabel(String text) => Padding(
-    padding: const EdgeInsets.only(left: 5, bottom: 8),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 13,
-        color: Colors.black54,
-      ),
-    ),
-  );
-
-  Widget _buildField(
-    TextEditingController ctrl,
-    IconData icon,
-    String hint, {
-    int maxLines = 1,
-  }) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.7),
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
       borderRadius: BorderRadius.circular(15),
-      border: Border.all(color: Colors.white),
-    ),
-    child: TextField(
-      controller: ctrl,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: Colors.blueAccent),
-        hintText: hint,
-        border: InputBorder.none,
-        contentPadding: const EdgeInsets.all(15),
-      ),
-    ),
-  );
+      boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, spreadRadius: 2)],
+    );
+  }
 
-  Widget _buildPriceCard() => Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.5),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-      children: [
-        Checkbox(
-          value: isUrgent,
-          onChanged: (v) => setState(() => isUrgent = v!),
-          activeColor: Colors.blueAccent,
-        ),
-        const Text("Urgent Delivery"),
-        const Spacer(),
-        const Text(
-          "RM 5.00",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Colors.blueAccent,
+  Widget _buildLocationCard({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    required String checkLabel,
+    required bool isCheck,
+    required Function(bool?) onCheckChanged,
+  }) {
+    return Container(
+      decoration: _cardDecoration(),
+      child: Column(
+        children: [
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              prefixIcon: Icon(icon, color: Colors.blueGrey),
+              hintText: hint,
+              contentPadding: const EdgeInsets.symmetric(vertical: 15),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _buildOrderButton() => InkWell(
-    onTap: _createOrder,
-    child: Container(
-      height: 60,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4A90E2), Color(0xFF007AFF)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+          const Divider(height: 1),
+          CheckboxListTile(
+            title: Text(checkLabel, style: const TextStyle(fontWeight: FontWeight.w500)),
+            value: isCheck,
+            activeColor: Colors.blue,
+            controlAffinity: ListTileControlAffinity.leading,
+            onChanged: onCheckChanged,
           ),
         ],
       ),
-      child: const Center(
-        child: Text(
-          "Order Now",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+    );
+  }
+
+  Widget _buildNote() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.teal[50],
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.teal.withOpacity(0.5)),
       ),
-    ),
-  );
+      child: const Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.teal),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text("Note: Please pay money to runner when the ride arrives.", 
+              style: TextStyle(color: Colors.teal, fontSize: 13, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:my_new_app/service_page.dart';
-import 'chat_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class OrderHistoryPage extends StatefulWidget {
   final String studentID;
@@ -12,82 +13,169 @@ class OrderHistoryPage extends StatefulWidget {
 
 class _OrderHistoryPageState extends State<OrderHistoryPage> { 
   bool isSwitch = false; // For user/runner mode switch
+  List<dynamic> allOrders = []; // 存放从数据库拿到的所有订单
+  bool isLoading = true;
 
-  // User view with order details and status
-  Widget _buildUserView() {
-    return Column(
-      children: [
-        const Text(
-          "User Order History",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrders();
+  }
+
+  // 在 _OrderHistoryPageState 类中修改 _fetchOrders 方法：
+
+Future<void> _fetchOrders() async {
+  if (!mounted) return;
+  setState(() => isLoading = true);
+  try {
+    // 注意这里的路径：/api/orders/history/
+    final response = await http.get(
+      Uri.parse('http://10.0.2.2:5000/api/orders/history/${widget.studentID}'),
+    );
+
+    if (!mounted) return;
+
+    if (response.statusCode == 200) {
+      setState(() {
+        allOrders = json.decode(response.body);
+        isLoading = false;
+      });
+    } else {
+      print("Server error: ${response.statusCode}");
+      setState(() => isLoading = false);
+    }
+  } catch (e) {
+    print("Network Error: $e");
+    if (!mounted) return;
+    
+    setState(() => isLoading = false);
+  }
+}
+Widget _buildOrderCard(dynamic order) {
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
         ),
-        const SizedBox(height: 10),
-        
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
-                spreadRadius: 2,
-                blurRadius: 5,
-              ),
-            ],
+      ],
+    ),
+
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+
+        // Type
+        Text(
+          order['type'] ?? "Unknown",
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text("Order #12345", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              SizedBox(height: 4),
-              Text("Status: Delivered", style: TextStyle(fontSize: 12, color: Colors.green)),
-              SizedBox(height: 4),
-              Text("Items: Burger, Fries", style: TextStyle(fontSize: 12)),
-            ],
+        ),
+
+        const SizedBox(height: 10),
+
+        // User / Runner name
+        Text(
+          isSwitch
+              ? "User: ${order['user_name']}"
+              : "Runner: ${order['runner_name']}",
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.black87,
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // Rating
+        Row(
+          children: [
+
+            const Text(
+              "Rating: ",
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+
+            ...List.generate(
+              5,
+              (index) => Icon(
+                index < (order['rating'] ?? 0)
+                    ? Icons.star
+                    : Icons.star_border,
+                color: Colors.amber,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+
+        // Comment
+        if ((order['comment'] ?? '').toString().isNotEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              "\"${order['comment']}\"",
+              style: const TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+
+        const SizedBox(height: 10),
+
+        // Date
+        Text(
+          (order['created_at'] ?? "").toString().length >= 10
+              ? order['created_at'].toString().substring(0, 10)
+              : "N/A",
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
           ),
         ),
       ],
+    ),
+  );
+}
+  // User view with order details and status
+  Widget _buildUserView() {
+    final userOrders = allOrders.where((o) => o['requester_id'] == widget.studentID).toList();
+
+    if (userOrders.isEmpty) return _emptyCard(icon: Icons.history, title: "No Orders", subtitle: "You haven't ordered anything yet.");
+
+    return Column(
+      children: userOrders.map((order) => _buildOrderCard(order)).toList(),
     );
   }
 
   //Runner view with different order details and status
   Widget _buildRunnerView() {
+    // 过滤出 runner_id 是我的订单
+    final runnerOrders = allOrders.where((o) => o['runner_id'] == widget.studentID).toList();
+
+    if (runnerOrders.isEmpty) return _emptyCard(icon: Icons.delivery_dining, title: "No Tasks", subtitle: "You haven't delivered anything yet.");
+
     return Column(
-      children:[
-        const Text(
-          "Runner Order History",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 10),
-        
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
-                spreadRadius: 2,
-                blurRadius: 5,
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text("Order #54321", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-              SizedBox(height: 4),
-              Text("Status: Completed", style: TextStyle(fontSize: 12, color: Colors.green)),
-              SizedBox(height: 4),
-              Text("Items Delivered: Pizza, Soda", style: TextStyle(fontSize: 12)),
-            ],
-          ),
-        ),
-      ]
+      children: runnerOrders.map((order) => _buildOrderCard(order)).toList(),
     );
   }
 
@@ -97,11 +185,11 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha:0.9),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
+            color: Colors.grey.withValues(alpha:0.05),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -109,7 +197,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       ),
       child: Column(
         children:[
-          Icon(icon, size: 28, color: Color(0xFF6C8EF5)),
+          Icon(icon, size: 28, color: const Color(0xFF6C8EF5)),
           const SizedBox(height: 8),
           Text(
             title,
@@ -130,7 +218,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   //_empty order card order
-  Widget_emptyCard({
+  Widget _emptyCard({
     required IconData icon,
     required String title,
     required String subtitle,
@@ -139,12 +227,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha:0.9),
         borderRadius: BorderRadius.circular(22),
           ),
       child: Column(
         children:[
-          Icon(icon, size: 32, color: Color(0xFF6C8EF5)),
+          Icon(icon, size: 32, color: const Color(0xFF6C8EF5)),
           const SizedBox(height: 12),
           Text(
             title,
@@ -162,29 +250,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      //Chat button
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.white,
-        elevation: 6,
-        child: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(40),
-              ),
-            ),
-            builder: (context) {
-              return SizedBox(
-                height: MediaQuery.of(context).size.height * 0.75,
-                child: ChatPage(studentID: widget.studentID),
-              );
-            },
-          );
-        },
-      ),
       //Background
       body: Container(
         width: double.infinity,
@@ -200,16 +265,17 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
+          child: isLoading 
+            ? const Center(child: CircularProgressIndicator()) // 加载中显示转圈
+            : RefreshIndicator( // 添加下拉刷新功能
+                onRefresh: _fetchOrders,
                 child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Top bar with icon and title
                       Row(
                         children: [
                           GestureDetector(
@@ -219,12 +285,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                                 MaterialPageRoute(builder: (context) => ServicePage(studentID: widget.studentID)),
                               );
                             },
-                          child: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: Color(0xFF6C8EF5),
-                            size: 28,
+                            child: const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: Color(0xFF6C8EF5),
+                              size: 28,
+                            ),
                           ),
-                        ),
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Text(
@@ -237,14 +303,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                             ),
                           ),
                           Row(
-                              children: [
-                                Text(
-                                    isSwitch ? "Runner Mode" : "User Mode",
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF2F3A5A),
-                                      fontStyle: FontStyle.italic,
-                                    ),
+                            children: [
+                              Text(
+                                  isSwitch ? "Runner Mode" : "User Mode",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF2F3A5A),
+                                    fontStyle: FontStyle.italic,
+                                  ),
                               ),
                               Switch(
                                 value: isSwitch,
@@ -262,7 +328,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                                     ),
                                   );
                                 },
-                                activeColor: Colors.white,
+                                activeThumbColor: Colors.white,
                                 activeTrackColor: const Color(0xFF6C8EF5),
                                 inactiveThumbColor: Colors.white,
                                 inactiveTrackColor: Colors.grey,
@@ -277,8 +343,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   ),
                 ),
               ),
-            ],
-          ),
+          
         ),
       ),
     );

@@ -2,20 +2,32 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'runner_deliverydrop.dart'; // 确保文件名引用正确
+import 'runner_deliverydrop.dart'; 
 
 class RunnerDeliveryTake extends StatefulWidget {
-  final String orderId;
-
-  const RunnerDeliveryTake({super.key, required this.orderId});
+  final dynamic order;
+  final String runnerId;
+  
+  const RunnerDeliveryTake({
+    Key? key, 
+    required this.order, 
+    required this.runnerId})
+      : super(key: key);
 
   @override
   State<RunnerDeliveryTake> createState() => _RunnerDeliveryTakeState();
 }
 
 class _RunnerDeliveryTakeState extends State<RunnerDeliveryTake> {
-  Map<String, dynamic>? _orderData;
-  bool _isLoading = true;
+  bool isDetailsConfirmed = false;
+  Map<String, dynamic>? detailedOrder;
+  bool isLoading = true;
+
+  double _parsePrice(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 
   @override
   void initState() {
@@ -24,218 +36,303 @@ class _RunnerDeliveryTakeState extends State<RunnerDeliveryTake> {
   }
 
   Future<void> _fetchOrderDetails() async {
-    final String url =
-        'http://10.0.2.2:5000/api/order/detail/${widget.orderId}';
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        Uri.parse(
+          'http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}',
+        ),
+      );
+
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         setState(() {
-          _orderData = json.decode(response.body);
-          _isLoading = false;
+          detailedOrder = jsonDecode(response.statusCode == 200 ? response.body : "{}");
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint("Error fetching details: $e");
-      setState(() => _isLoading = false);
+      debugPrint("Fetch Error: $e");
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  Future<void> _handleTakeOrder() async {
-    const String url = 'http://10.0.2.2:5000/api/order/update_status';
-
+  Future<void> _takeOrder() async {
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
     try {
       final response = await http.post(
-        Uri.parse(url),
+        url,
         headers: {"Content-Type": "application/json"},
-        body: json.encode({
-          "order_id": widget.orderId,
-          "status_code": 1, // 接单后状态变为 1
+        body: jsonEncode({
+          "order_id": widget.order['order_id'],
+          "status_code": 1, 
+          "runner_id": widget.runnerId,
         }),
       );
 
-      if (response.statusCode == 200) {
-        debugPrint('Status updated successfully to 1');
-        if (!mounted) return;
+      debugPrint("Response Status: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
 
-        // 跳转并传递 orderId
-        Navigator.push(
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => RunnerDeliveryDrop(orderId: widget.orderId),
+            builder: (context) => RunnerDeliveryDrop(
+              order: detailedOrder ?? widget.order,
+              runnerId: widget.runnerId,
+            ),
           ),
         );
-      } else {
-        debugPrint('Failed to update status');
       }
     } catch (e) {
-      debugPrint('Error updating status: $e');
+      debugPrint("Take Order Error: $e");
     }
+    print("Sending order_id: ${widget.order['order_id']}");
+    print("With runner_id: ${widget.runnerId}");
   }
 
+ 
   @override
   Widget build(BuildContext context) {
+    double runnerProfit = _parsePrice(
+      detailedOrder?['runner_profit'] ?? widget.order['runner_profit'],
+    );
+
+    double totalToCollect = _parsePrice(
+      detailedOrder?['total_to_collect'] ?? widget.order['total_to_collect'],
+    );
+
+    bool isUrgent =
+        detailedOrder?['is_urgent'] ?? widget.order['is_urgent'] ?? false;
+        
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F7FF),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF0F7FF),
-        elevation: 0,
-        leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Item Delivery Service',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+        backgroundColor: Colors.transparent, 
+        elevation: 0, 
+        iconTheme: const IconThemeData(color: Colors.black87),),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
           ),
         ),
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle('Customer Information'),
-                  _buildInfoCard([
-                    _buildDataRow('Name', _orderData?['requester_id'] ?? 'N/A'),
-                    _buildDataRow('Order ID', widget.orderId),
-                    _buildDataRow(
-                      'Dorm',
-                      _orderData?['dropoff_point'] ?? 'N/A',
-                    ),
-                    _buildDataRow(
-                      'Contact',
-                      _orderData?['requester_contact'] ?? 'N/A',
-                    ),
-                  ]),
-                  const SizedBox(height: 20),
-                  _buildSectionTitle('Delivery Details'),
-                  _buildInfoCard([
-                    _buildDataRow(
-                      'Quantity',
-                      '${_orderData?['parcel_qty'] ?? 0} Items',
-                    ),
-                    _buildDataRow(
-                      'Pick-up Point',
-                      _orderData?['pickup_point'] ?? 'N/A',
-                    ),
-                    _buildDataRow(
-                      'Drop-off Point',
-                      _orderData?['dropoff_point'] ?? 'N/A',
-                    ),
-                    const Divider(height: 30, thickness: 0.5),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Money to be received:',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
+        child: SafeArea(
+          bottom: false, // Fix: Allow gradient to bleed into the bottom navigation area
+          child: isLoading 
+            ? const Center(child: CircularProgressIndicator()) // 增加 Loading 显示
+            : SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                const Text(
+                  "Item Details",
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 25),
+
+                Container(
+                  padding: const EdgeInsets.all(25),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(35),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha:0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _row(
+                        Icons.person,
+                        "Customer",
+                        (detailedOrder?['customer_name'] ?? widget.order['customer_name'] ?? "Loading...")
+                      ),
+                      const SizedBox(height: 10),
+                      _row(
+                        Icons.phone,
+                        "Contact",
+                        (detailedOrder?['requester_contact'] ?? widget.order['requester_contact'] ?? "123"),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      _row(
+                        Icons.location_on,
+                        "Pickup Location",
+                        (detailedOrder?['pickup_location']
+                            ?? widget.order['pickup_location']
+                            ?? "Unknown Location"),
+                      ),
+                      const SizedBox(height: 10),
+                      _row(
+                        Icons.home,
+                        "Dropoff Location",
+                        (detailedOrder?['dropoff_point'] ?? widget.order['dropoff_point'] ?? "D1 Dorm"),
+                      ),
+                      const SizedBox(height: 10),
+                      _row(
+                        Icons.person,
+                        "Quantity",
+                        (detailedOrder?['parcel_qty'] ?? widget.order['parcel_qty'] ?? 0).toString(),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      const Text(
+                        "Ride Details:",
+                        style: TextStyle(
+                          color: Colors.black45,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Text(
-                          'RM ${_orderData?['delivery_fee'] ?? '0.00'}',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue.shade900,
-                          ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        (detailedOrder?['ride_details'] ?? widget.order['ride_details'] ?? "No details available"),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF333333),
+                          fontStyle: FontStyle.italic,
                         ),
-                      ],
-                    ),
-                  ]),
-                  const SizedBox(height: 40),
-                  _buildGradientButton(),
-                ],
-              ),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      // --- Pricing Section ---
+
+                      _row(
+                        Icons.attach_money,
+                        "Your Profit",
+                        "RM ${runnerProfit.toStringAsFixed(2)}",
+                      ),
+
+                      if (isUrgent)
+                        const SizedBox(height: 10),
+
+                      if (isUrgent)
+                        _row(
+                          Icons.bolt,
+                          "Urgent Included",
+                          "YES",
+                        ),
+
+                      const Divider(height: 30, color: Colors.black12),
+
+                      _row(
+                        Icons.payments,
+                        "Total To Collect",
+                        "RM ${totalToCollect.toStringAsFixed(2)}",
+                      ),
+                      const SizedBox(height: 25),
+                      _noteBox(totalToCollect),
+                      const SizedBox(height: 20),
+                      _checkboxArea(),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                _btn(),
+                const SizedBox(height: 40), // Bottom padding for clean look
+              ],
             ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildGradientButton() {
-    return Container(
-      width: double.infinity,
-      height: 55,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
+   Widget _noteBox(double collectAmount) {
+  return Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.red.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(
+        color: Colors.redAccent.withValues(alpha: 0.15),
+      ),
+    ),
+    child: Text(
+      "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery.",
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.redAccent,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+  );
+}
+
+  Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF6C8EF5), size: 20),
+          const SizedBox(width: 10),
+          Text(label, style: const TextStyle(color: Colors.black54)),
+          const Spacer(),
+          Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: valueColor ?? Colors.black87)),
         ],
       ),
-      child: ElevatedButton(
-        onPressed: _handleTakeOrder,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
+    );
+  }
+
+  Widget _checkboxArea() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FB),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: CheckboxListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        title: const Text(
+          "I have read the details",
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
-        child: const Text(
-          'Take',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        value: isDetailsConfirmed,
+        activeColor: const Color(0xFF4A90E2),
+        onChanged: (v) => setState(() => isDetailsConfirmed = v ?? false),
+        controlAffinity: ListTileControlAffinity.leading,
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) => Padding(
-    padding: const EdgeInsets.only(left: 4, bottom: 10),
-    child: Text(
-      title,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.bold,
-        color: Colors.black54,
+  Widget _btn() {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isDetailsConfirmed
+            ? const Color(0xFF4A90E2)
+            : Colors.grey.shade300,
+        minimumSize: const Size(double.infinity, 65),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
-    ),
-  );
-
-  Widget _buildInfoCard(List<Widget> children) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: children,
-    ),
-  );
-
-  Widget _buildDataRow(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.black45, fontSize: 14),
+      onPressed: isDetailsConfirmed ? _takeOrder : null,
+      child: const Text(
+        "Take Order",
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.black87,
-          ),
-        ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }

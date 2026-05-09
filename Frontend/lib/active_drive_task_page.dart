@@ -1,8 +1,10 @@
+//18
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'chat_page.dart'; 
+import 'runner_payment_confirm_page.dart';
 
-//18
 class ActiveDriveTaskPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
@@ -19,15 +21,56 @@ class ActiveDriveTaskPage extends StatefulWidget {
 class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
   int currentStatus = 1;
   bool isLoading = false;
+  Map<String, dynamic>? liveOrder; // 存储实时数据
+  bool isPageLoading = true;
 
   @override
   void initState() {
     super.initState();
     currentStatus = int.tryParse(widget.order['status_code'].toString()) ?? 1;
     if (currentStatus == 0) currentStatus = 1;
+    _refreshData();
   }
 
-  Future<void> _updateStatus(int s) async {
+  Future<void> _refreshData() async {
+  try {
+    final res = await http.get(
+      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),
+    );
+    if (res.statusCode == 200) {
+      setState(() {
+        liveOrder = jsonDecode(res.body);
+        currentStatus = liveOrder!['status_code'];
+        isPageLoading = false;
+      });
+    }
+  } catch (e) {
+    setState(() => isPageLoading = false);
+  }
+}
+
+  Future<void> _updateStatus(int nextS) async {
+
+    if (nextS == 4) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RunnerPaymentConfirmPage( // 你需要创建这个页面
+          // 1. 将 runnerId 传给 studentID (用于 ServicePage 跳转)
+            studentID: widget.runnerId,
+            orderId: widget.order['order_id'].toString(),
+            // 2. 提取 delivery_fee 并转换为 double 类型
+            amount: double.tryParse(widget.order['delivery_fee'].toString()) ?? 0.0,
+            // 3. 提取客户相关信息
+            customerName: widget.order['customer_name'] ?? "User",
+            customerStudentID: widget.order['requester_id']?.toString() ?? "N/A",
+            customerContact: widget.order['requester_contact']?.toString() ?? "N/A",
+          ),
+      ),
+    );
+    return;
+  }
+
     setState(() => isLoading = true);
     final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
     try {
@@ -36,45 +79,22 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.order['order_id'],
-          "next_status": s,
+          "status_code": nextS,
           "runner_id": widget.runnerId,
         }),
       );
       if (res.statusCode == 200) {
         setState(() {
-          currentStatus = s;
+          currentStatus = nextS;
           isLoading = false;
         });
-        if (s == 4) _finish();
       }
     } catch (e) {
       setState(() => isLoading = false);
+      debugPrint("Update Error: $e");
     }
   }
 
-  void _finish() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Ride Finished!"),
-        content: const Text("Payment confirmed."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text(
-              "OK",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +106,18 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           "Ride Progress",
           style: TextStyle(color: Colors.black87),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ChatPage(
+                studentID: widget.order['requester_id'], // 拿到下单人 ID
+                runnerID: widget.runnerId,
+              )),
+            ),
+          ),
+        ],
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
@@ -106,19 +138,19 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _summaryCard(),
+                _summaryCard("Ride"),
                 const SizedBox(height: 25),
                 const Text(
                   "Note:",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
+                    color: Colors.redAccent,
                   ),
                 ),
                 const SizedBox(height: 10),
                 _noteBox(
-                  "Please verify the passenger identity. Drive safely and follow traffic rules.\n\nCollect payment at the end of the ride.",
+                   "Please verify the passenger identity. Drive safely and follow traffic rules.\n\nCollect payment at the end of the ride.",
                 ),
                 const SizedBox(height: 35),
                 const Text(
@@ -156,7 +188,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
     );
   }
 
-  Widget _summaryCard() => Container(
+  Widget _summaryCard(String type) => Container(
     padding: const EdgeInsets.all(25),
     decoration: BoxDecoration(
       color: Colors.white,
@@ -167,33 +199,63 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
     ),
     child: Column(
       children: [
-        _rowSummary("Passenger", widget.order['customer_name'] ?? "BCD"),
+        _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
-        _rowSummary("To", widget.order['dropoff_point'] ?? "Kipmall"),
+        _rowSummary("Pickup Point", liveOrder?['pickup_point'] ?? "N/A"),
         const SizedBox(height: 8),
-        _rowSummary("Earning", "RM ${widget.order['delivery_fee'] ?? '8.0'}"),
+        _rowSummary("Dropoff Point", liveOrder?['dropoff_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary( 
+          "Collect",
+          "RM ${double.tryParse(
+              liveOrder?['total_to_collect'].toString() ?? '0'
+            )?.toStringAsFixed(2) ?? '0.00'}",
+            valueColor: Colors.green,
+        ), 
+        _rowSummary(
+          "Profit",
+          "RM ${double.tryParse(
+              liveOrder?['runner_profit'].toString() ?? '0'
+            )?.toStringAsFixed(2) ?? '0.00'}",
+            valueColor: Colors.blue,
+        ),
       ],
     ),
   );
-  Widget _rowSummary(String l, String v) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(l, style: const TextStyle(color: Colors.grey, fontSize: 15)),
-      Text(
-        v,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-      ),
-    ],
-  );
-  Widget _noteBox(String t) => Container(
+  Widget _rowSummary(
+  String l,
+  String v, {
+  Color valueColor = Colors.black,
+}) =>
+    Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          l,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 15,
+          ),
+        ),
+        Text(
+          v,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
       color: Colors.white.withOpacity(0.8),
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.blueAccent.withOpacity(0.2)),
+      border: Border.all(color: Colors.redAccent.withOpacity(0.2)),
     ),
     child: Text(
-      t,
+      text,
       style: const TextStyle(
         fontSize: 14,
         color: Colors.black87,
@@ -227,9 +289,9 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
 
   Widget _escapeBtn() => TextButton.icon(
     onPressed: () => Navigator.pop(context),
-    icon: const Icon(Icons.arrow_back, color: Colors.black54),
+    icon: const Icon(Icons.exit_to_app, color: Colors.black54),
     label: const Text(
-      "Return to Dashboard",
+      "Exit to Dashboard",
       style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
     ),
   );

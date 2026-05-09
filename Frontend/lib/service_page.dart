@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'profile_page.dart';
 import 'order_history_page.dart';
+import 'parcel_taking_page.dart';
+import 'food_delivering_page.dart' as food;
+import 'pickup_dropoff_page.dart';
+import 'user_GroceryPurchasing.dart'; 
+import 'item_delivery_page.dart';
+import 'runner_main_menu.dart';
 
 final baseUrl = kIsWeb
     ? 'http://127.0.0.1:5000'   // Chrome
@@ -18,7 +24,116 @@ class ServicePage extends StatefulWidget {
 
 //Service Page State
 class _ServicePageState extends State<ServicePage> {
-  int _selectedIndex = 0;
+  int _currentTabIndex = 0;
+
+  Widget _buildBody() {
+    switch (_currentTabIndex) {
+      case 0:
+        return _buildHomeContent(); // 首页的服务格子
+      case 1:
+        return OrderHistoryPage(studentID: widget.studentID);
+      case 2:
+        return RunnerMainMenu(runnerId: widget.studentID);
+      case 3:
+        return ProfilePage(studentID: widget.studentID);
+      default:
+        return _buildHomeContent();
+    }
+  }
+
+  Widget _buildHomeContent(){
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.menu_rounded,
+                color: Color(0xFF6C8EF5),
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Hey ${widget.studentID} 👋",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2F3A5A),
+                  ),
+                ),
+                
+              ),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha:0.9),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  color: Color(0xFF6C8EF5),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Title
+          const Text(
+            "What do you need today?",
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2F3A5A),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Service cards
+          GridView.count(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            childAspectRatio: 0.7,
+            children: [
+              _serviceCard(
+                title: "Parcel Delivery",
+                imagePath: "assets/parcel_image.png",
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ParcelTakingPage(studentID: widget.studentID))),
+              ),
+              _serviceCard(
+                title: "Food Delivery",
+                imagePath: "assets/fooddelivery_image.png",
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => food.FoodDeliveringPage(studentID: widget.studentID))),
+              ),
+              _serviceCard(
+                title: "Pick-up&Drop-off",
+                imagePath: "assets/pickupndropoff_image.png",
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FoodDeliveringPage(studentID: widget.studentID))),
+              ),
+              _serviceCard(
+                title: "Grocery",
+                imagePath: "assets/grocery_image.png",
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => GroceryPurchasingScreen(studentID: widget.studentID))),
+              ),
+              _serviceCard(
+                title: "Item Delivery",
+                imagePath: "assets/grocery_image.png",
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ItemDeliveryPage(studentID: widget.studentID))),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _serviceCard({
     required String title, //Title
@@ -29,11 +144,11 @@ class _ServicePageState extends State<ServicePage> {
       onTap: onTap, // Tap action
       child: Container( // Card container
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.92),
+          color: Colors.white.withValues(alpha:0.92),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha:0.08),
               blurRadius: 12,
               offset: const Offset(0, 5),
             ),
@@ -50,7 +165,7 @@ class _ServicePageState extends State<ServicePage> {
               child: Image.asset(
                 imagePath,
                 width: double.infinity,
-                height: 170,
+                height: 130,
                 fit: BoxFit.cover,
               ),
             ),
@@ -105,14 +220,14 @@ class _ServicePageState extends State<ServicePage> {
   }
 
   Widget _navItem(IconData icon, String label, int index) {
-    final bool selected = _selectedIndex == index;
+    final bool selected = _currentTabIndex == index;
 
     return GestureDetector(
       onTap: () {
-        if (index == _selectedIndex) return;
+        if (index == _currentTabIndex) return;
 
         setState((){
-          _selectedIndex = index;
+          _currentTabIndex = index;
         });
         if (index == 0) {
           return; // Already on Home, do nothing
@@ -169,11 +284,11 @@ class _ServicePageState extends State<ServicePage> {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha:0.9),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha:0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -193,126 +308,26 @@ class _ServicePageState extends State<ServicePage> {
     );
   }
 
-  //Main build function
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      //Background 
+      extendBody: true, // 让 Body 延伸到底部栏后面，防止白底
       body: Container(
         width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFEAF3FF),
-              Color(0xFFD6E8FF),
-              Color(0xFFBFD9FF),
-            ],
+            colors: [Color(0xFFEAF3FF), Color(0xFFBFD9FF)],
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.menu_rounded,
-                            color: Color(0xFF6C8EF5),
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              "Hey ${widget.studentID} 👋",
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF2F3A5A),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.person_outline,
-                              color: Color(0xFF6C8EF5),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Title
-                      const Text(
-                        "What do you need today?",
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2F3A5A),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Service cards
-                      GridView.count(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        childAspectRatio: 0.6,
-                        children: [
-                          _serviceCard(
-                            title: "Parcel Delivery",
-                            imagePath: "assets/parcel_image.png",
-                            onTap: () {
-                              // 跳去 parcel page
-                            },
-                          ),
-                          _serviceCard(
-                            title: "Food Delivery",
-                            imagePath: "assets/fooddelivery_image.png",
-                            onTap: () {
-                              // 跳去 food page
-                            },
-                          ),
-                          _serviceCard(
-                            title: "Pick-up&Drop-off",
-                            imagePath: "assets/pickupndropoff_image.png",
-                            onTap: () {
-                              // 跳去 pickup/dropoff page
-                            },
-                          ),
-                          _serviceCard(
-                            title: "Grocery",
-                            imagePath: "assets/grocery_image.png",
-                            onTap: () {
-                              // 跳去 grocery page
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              _bottomBar(),
-            ],
-          ),
+          bottom: false,
+          child: _buildBody(), // 这里动态切换内容！
         ),
       ),
+      bottomNavigationBar: _bottomBar(), // 底部栏永远固定在这里
     );
   }
+  
 }

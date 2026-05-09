@@ -2,259 +2,319 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'chat_page.dart'; 
+import 'runner_proof_photo_page.dart';
 
 class RunnerDeliveryDrop extends StatefulWidget {
-  final String orderId; // 必须接收 orderId
-
-  const RunnerDeliveryDrop({super.key, required this.orderId});
+  final dynamic order;
+  final String runnerId;
+  const RunnerDeliveryDrop({
+    Key? key,
+    required this.order,
+    required this.runnerId,
+  }) : super(key: key);
 
   @override
   State<RunnerDeliveryDrop> createState() => _RunnerDeliveryDropState();
 }
 
 class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
-  // 1: Picking - up item
-  // 2: Item pick-upped
-  // 3: Dropped
-  // 4: Completed
-  int activeStep = 1;
-  bool isUpdating = false;
+  int currentStatus = 1;
+  bool isLoading = false;
+  Map<String, dynamic>? liveOrder; // 存储实时数据
+  bool isPageLoading = true;
 
-  // 调用 API 更新状态
-  Future<void> _updateStatus(int nextStep) async {
-    setState(() => isUpdating = true);
-    const String url = 'http://10.0.2.2:5000/api/order/update_status';
+  @override
+  void initState() {
+    super.initState();
+    currentStatus = int.tryParse(widget.order['status_code'].toString()) ?? 1;
+    if (currentStatus == 0) currentStatus = 1;
+    _refreshData();
+  }
 
-    try {
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"order_id": widget.orderId, "status_code": nextStep}),
+  Future<void> _refreshData() async {
+  try {
+    final res = await http.get(
+      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),
+    );
+    if (res.statusCode == 200) {
+      setState(() {
+        liveOrder = jsonDecode(res.body);
+        currentStatus = liveOrder!['status_code'];
+        isPageLoading = false;
+      });
+    }
+  } catch (e) {
+    setState(() => isPageLoading = false);
+  }
+}
+
+  // 计算价格逻辑
+  double _parsePrice(dynamic price) {
+    if (price is num) return price.toDouble();
+    if (price is String) return double.tryParse(price) ?? 0.0;
+    return 0.0;
+  }
+
+  Future<void> _updateStatus(int nextS) async {
+    if (nextS == 4) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RunnerProofPhotoPage(
+            orderId: widget.order['order_id'].toString(),
+            runnerId: widget.runnerId,
+          ),
+        ),
       );
+      return;
+    }
 
-      if (response.statusCode == 200) {
+    setState(() => isLoading = true);
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
+    try {
+      final res = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "order_id": widget.order['order_id'],
+          "status_code": nextS, 
+          "runner_id": widget.runnerId,
+        }),
+      );
+      if (res.statusCode == 200) {
         setState(() {
-          activeStep = nextStep;
+          currentStatus = nextS;
+          isLoading = false;
         });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Update failed, please try again.")),
-        );
       }
     } catch (e) {
-      debugPrint("Update error: $e");
-    } finally {
-      setState(() => isUpdating = false);
+      setState(() => isLoading = false);
+      debugPrint("Update Error: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const Color bgColor = Color(0xFFF0F7FF);
+    double earning = _parsePrice(
+      liveOrder?['runner_profit'] ?? widget.order['runner_profit'],
+    );
+
+    double totalToCollect = _parsePrice(
+      liveOrder?['total_to_collect'] ?? widget.order['total_to_collect'],
+    );
 
     return Scaffold(
-      backgroundColor: bgColor,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        title: const Text(
+          "Task Progress",
+          style: TextStyle(color: Color(0xFF2F3A5A), fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ChatPage(
+                studentID: widget.order['requester_id']?.toString() ?? "", 
+                runnerID: widget.runnerId,
+              )),
+            ),
+          ),
+        ],
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Item Delivery Progress',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+        iconTheme: const IconThemeData(color: Color(0xFF2F3A5A)),
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
           ),
         ),
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
+        child: SafeArea(
+          child: SingleChildScrollView( // 1. 添加滚动视图
+            physics: const BouncingScrollPhysics(), // 添加回弹效果，体验更好
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildNoteCard(),
+                _summaryCard(earning, totalToCollect),
+                const SizedBox(height: 25),
+                const Text(
+                  "Payment Reminder:",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF6C8EF5),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _noteBox(
+                  "1. Collect item at ${widget.order['pickup_point']} the first.\n"
+                  "2. Deliver to ${widget.order['dropoff_point']}.\n"
+                  "3. Collect TOTAL RM ${totalToCollect.toStringAsFixed(2)} from the customer.",
+                ),
                 const SizedBox(height: 30),
-                _buildStatusSection(),
+                const Text(
+                  "Update Progress",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F3A5A)),
+                ),
+                const SizedBox(height: 15),
+                _stepBtn("1. Picking Up Item", 1, 2, const Color(0xFF6C8EF5)),
+                const SizedBox(height: 12),
+                _stepBtn("2. Item Pick-Upped  ", 2, 3, const Color(0xFF6C8EF5)),
+                const SizedBox(height: 12),
+                _stepBtn("3. Delivered & Proof", 3, 4, const Color(0xFF6C8EF5)),
+                const SizedBox(height: 40),
+                _escapeBtn(),
+                if (isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 20),
+                    child: Center(child: CircularProgressIndicator(color: Color(0xFF6C8EF5))),
+                  ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
-          if (isUpdating) const Center(child: CircularProgressIndicator()),
-        ],
-      ),
-      floatingActionButton: _buildGradientChatButton(),
-    );
-  }
-
-  Widget _buildNoteCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15),
-        ],
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.orangeAccent),
-              SizedBox(width: 8),
-              Text(
-                'Note:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          Text(
-            '• Please remember to get the receipt from the store.',
-            style: TextStyle(fontSize: 14, height: 1.4),
-          ),
-          SizedBox(height: 6),
-          Text(
-            '• Remember to collect money from customer.',
-            style: TextStyle(fontSize: 14, height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusSection() {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildClickableStep(
-            index: 1,
-            label: 'Picking - up item',
-            icon: Icons.store_mall_directory_outlined,
-          ),
-          _buildVerticalConnector(isActive: activeStep > 1),
-          _buildClickableStep(
-            index: 2,
-            label: 'Item pick-upped',
-            icon: Icons.local_shipping_outlined,
-          ),
-          _buildVerticalConnector(isActive: activeStep > 2),
-          _buildClickableStep(
-            index: 3,
-            label: 'Dropped',
-            icon: Icons.where_to_vote_outlined,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildClickableStep({
-    required int index,
-    required String label,
-    required IconData icon,
-  }) {
-    bool isCurrent = activeStep == index;
-    bool isCompleted = activeStep > index;
-
-    Color stepColor = isCurrent
-        ? const Color(0xFF0D47A1)
-        : (isCompleted ? Colors.green : Colors.grey.shade400);
-    Color bgColor = isCurrent
-        ? const Color(0xFFFF4081).withOpacity(0.08)
-        : (isCompleted ? Colors.green.withOpacity(0.05) : Colors.transparent);
-
-    return InkWell(
-      onTap: (isCurrent && activeStep < 4)
-          ? () => _updateStatus(activeStep + 1)
-          : null,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isCurrent
-                ? const Color(0xFF0D47A1).withOpacity(0.2)
-                : Colors.transparent,
-          ),
         ),
-        child: Row(
+      ),
+    );
+  }
+
+  Widget _summaryCard(double earn, double total) => Container(
+    padding: const EdgeInsets.all(25),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.9),
+      borderRadius: BorderRadius.circular(25),
+      boxShadow: [
+        BoxShadow(color: Colors.blue.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5)),
+      ],
+    ),
+    child: Column(
+      children: [
+        _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
+        const SizedBox(height: 8),
+        _rowSummary("Contact", liveOrder?['requester_contact'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Pickup-point", liveOrder?['pickup_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Dropoff-point", liveOrder?['dropoff_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Details", liveOrder?['item_details'] ?? "N/A"),
+        const SizedBox(height: 10),
+        
+        _rowSummary( 
+          "Collect",
+          "RM ${double.tryParse(
+              liveOrder?['total_to_collect'].toString() ?? '0'
+            )?.toStringAsFixed(2) ?? '0.00'}",
+            valueColor: Colors.green,
+        ), 
+        _rowSummary(
+          "Profit",
+          "RM ${double.tryParse(
+              liveOrder?['runner_profit'].toString() ?? '0'
+            )?.toStringAsFixed(2) ?? '0.00'}",
+            valueColor: Colors.blue,
+        ),
+        const SizedBox(height: 12),
+        const Divider(color: Colors.black12),
+        const SizedBox(height: 8),
+        
+        // 3. 最终拿回来的总现金
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isCurrent ? stepColor.withOpacity(0.1) : Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: stepColor.withOpacity(0.3)),
-              ),
-              child: Icon(icon, color: stepColor, size: 24),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Total to Collect", style: TextStyle(color: Color(0xFF2F3A5A), fontWeight: FontWeight.bold, fontSize: 16)),
+                Text("(Cash from Customer)", style: TextStyle(color: Colors.grey, fontSize: 11)),
+              ],
             ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                  color: isCurrent ? Colors.black : stepColor,
-                ),
-              ),
+            Text(
+              "RM ${total.toStringAsFixed(2)}",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.green),
             ),
-            if (isCurrent)
-              const Icon(Icons.touch_app, color: Color(0xFF0D47A1), size: 20),
-            if (isCompleted)
-              const Icon(Icons.check_circle, color: Colors.green, size: 22),
           ],
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 
-  Widget _buildVerticalConnector({required bool isActive}) => Align(
-    alignment: Alignment.centerLeft,
-    child: Container(
-      margin: const EdgeInsets.only(left: 41),
-      height: 20,
-      width: 2.5,
-      decoration: BoxDecoration(
-        color: isActive ? Colors.green.withOpacity(0.5) : Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(2),
+// 稍微修改一下 _rowSummary 支持高亮
+Widget _rowSummary(String l, String v, {Color? valueColor, bool isHighlight = false}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(l, style: const TextStyle(color: Colors.blueGrey, fontSize: 14)),
+        Text(
+          v,
+          style: TextStyle(
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.w600, 
+            fontSize: 14, 
+            color: valueColor ?? (isHighlight ? Colors.blueAccent : const Color(0xFF2F3A5A))
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _noteBox(String text) => Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.6),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFF6C8EF5).withOpacity(0.2)),
+    ),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 14,
+        color: Color(0xFF2F3A5A),
+        fontWeight: FontWeight.w500,
+        height: 1.6,
       ),
     ),
   );
 
-  Widget _buildGradientChatButton() => FloatingActionButton(
-    onPressed: () {},
-    backgroundColor: Colors.transparent,
-    elevation: 0,
-    child: Container(
-      width: 60,
-      height: 60,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+  Widget _stepBtn(String l, int a, int t, Color c) {
+    bool done = currentStatus > a;
+    bool active = currentStatus == a;
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: done
+            ? Colors.grey.shade300
+            : (active ? c : Colors.white.withOpacity(0.8)),
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        elevation: active ? 4 : 0,
+      ),
+      onPressed: active ? () => _updateStatus(t) : null,
+      child: Text(
+        done ? "$l (Completed)" : l,
+        style: TextStyle(
+          color: active ? Colors.white : (done ? Colors.grey : Colors.black45),
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
         ),
       ),
-      child: const Icon(
-        Icons.chat_bubble_outline,
-        color: Colors.white,
-        size: 28,
-      ),
+    );
+  }
+
+  Widget _escapeBtn() => TextButton.icon(
+    onPressed: () => Navigator.pop(context),
+    icon: const Icon(Icons.dashboard_outlined, color: Colors.blueGrey),
+    label: const Text(
+      "Return to Marketplace",
+      style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w600),
     ),
   );
 }

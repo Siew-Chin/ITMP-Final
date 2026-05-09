@@ -1,29 +1,16 @@
+//24
 import 'package:flutter/material.dart';
 import 'package:rating_dialog/rating_dialog.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'service_page.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 final String url =  "http://google.com";
 
-void main(){
-  runApp(const App());
-}
-
-class App extends StatelessWidget {
-  const App({super.key});
-
-  @override
-  Widget build(BuildContext context){
-    return const MaterialApp(
-      home: UserRatingPage(studentID:"test123"),
-    );
-  }
-}
-
-//Rating page 
 class UserRatingPage extends StatefulWidget{
   final String studentID;
-  const UserRatingPage ({super.key, required this.studentID});
+  final String orderId;
+  const UserRatingPage ({super.key, required this.studentID, required this.orderId});
 
   @override
   State<UserRatingPage> createState() => _UserRatingPageState();
@@ -38,15 +25,15 @@ class _UserRatingPageState extends State<UserRatingPage>{
 
     _dialog = RatingDialog(
       initialRating: 3.0,
-      title: Text(
+      title: const  Text(
         "Rate Your Experience",
         textAlign: TextAlign.center,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize:22,
           fontWeight: FontWeight.bold,
         ),
       ),
-      message: Text(
+      message: const Text(
         'Tap a star to rate your experience',
         textAlign: TextAlign.center,
       ),
@@ -55,13 +42,21 @@ class _UserRatingPageState extends State<UserRatingPage>{
         print("⭐Rating: ${response.rating}");
         print("🗨️Comment: ${response.comment}");
 
-        if(response.rating >= 4){
-          final uri = Uri.parse(url);
-          if(await canLaunchUrl(uri)){
-            await launchUrl(uri);
-          }
-        }
-        if (!mounted)return;
+        try {
+        final res = await http.post(
+          Uri.parse("http://10.0.2.2:5000/api/order/feedback"),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            "order_id": widget.orderId, 
+            "rating": response.rating,
+            "comment": response.comment,
+          }),
+        );
+
+        print("Feedback API: ${res.body}");
+      } catch (e) {
+        print("Feedback error: $e");
+      }
 
         Navigator.pop(context);
         Navigator.pushReplacement(

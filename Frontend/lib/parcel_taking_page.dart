@@ -1,49 +1,54 @@
+//2
 import 'package:flutter/material.dart';
-import 'parcel_tracking_page.dart';
+import 'dart:convert';
+import 'waiting_page.dart';
+import 'parcel_tracking_page.dart'; 
+import 'package:http/http.dart' as http;
 
 class ParcelTakingPage extends StatefulWidget {
-  const ParcelTakingPage({super.key});
+  final String studentID;
+  const ParcelTakingPage({
+    super.key,required this.studentID
+    });
 
   @override
   State<ParcelTakingPage> createState() => _ParcelTakingPageState();
-}
+  }
 
 class _ParcelTakingPageState extends State<ParcelTakingPage> {
-  int _quantity = 1;
+  int parcel_qty = 1;
   final TextEditingController _dropOffController = TextEditingController();
   bool _isDorm = false;
   bool _isUrgent = false;
 
   // --- 核心计算逻辑 ---
   double get _totalPrice {
-    double basePrice = 0.0;
-    if (_quantity <= 5) {
-      // 1-5个: RM 2.00 / each
-      basePrice = _quantity * 2.0;
-    } else {
-      // 5个以上: 前5个RM10，剩下的 RM 1.50 / each
-      basePrice = (5 * 2.0) + ((_quantity - 5) * 1.5);
-    }
-    // 如果勾选 Urgent，总价增加 30%
-    return _isUrgent ? basePrice * 1.3 : basePrice;
+  double basePrice = 0.0;
+  if (parcel_qty <= 5) {
+    basePrice = parcel_qty * 2.0;
+  } else {
+    basePrice = (5 * 2.0) + ((parcel_qty - 5) * 1.5);
   }
+  
+  return _isUrgent ? basePrice + 1.0 : basePrice;
+}
 
   void _incrementQuantity() {
     setState(() {
-      if (_quantity < 10) _quantity++;
+      if (parcel_qty < 10) parcel_qty++;
     });
   }
 
   void _decrementQuantity() {
     setState(() {
-      if (_quantity > 1) _quantity--;
+      if (parcel_qty > 1) parcel_qty--;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF5F7FA), 
+      backgroundColor: const Color(0xFFF5F7FA), 
       appBar: AppBar(
         title: const Text(
           'Parcel Taking', // 标题
@@ -84,7 +89,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                         onPressed: _decrementQuantity,
                       ),
                       Text(
-                        '$_quantity',
+                        '$parcel_qty',
                         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 5),
@@ -135,8 +140,6 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                       setState(() {
                         _isDorm = value ?? false;
                         if (_isDorm) {
-                          _dropOffController.text = "My Dorm"; // 自动填入
-                        } else {
                           _dropOffController.clear();
                         }
                       });
@@ -156,7 +159,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
               ),
               child: CheckboxListTile(
                 title: const Text(
-                  "Urgent (+30% surcharge)",
+                  "Urgent (+RM 1.00 surcharge)",
                   style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                 ),
                 value: _isUrgent,
@@ -186,7 +189,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    "Total Price",
+                    "Total to Pay",
                     style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
                   ),
                   Text(
@@ -226,34 +229,83 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
 Align(
   alignment: Alignment.bottomRight,
   child: ElevatedButton.icon(
-    onPressed: () {
-      // 1. 这里是跳转逻辑
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ParcelTrackingPage(
-            totalPrice: _totalPrice, // 把算好的总价传给下一页显示
+    onPressed: () async {
+      if (!_isDorm && _dropOffController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Please enter a Drop Off Point or select Deliver to Dorm",
           ),
         ),
       );
-      
-      // 2. 以后你在这里接 API 3 (/api/parcel/create)
-      print("Order Successfully Created!");
-    },
-    icon: const Icon(Icons.send_rounded),
-    label: const Text(
-      "Order Now",
-      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-    ),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFF1E3A8A),
-      foregroundColor: Colors.white,  
-      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(30),
-      ),
-      elevation: 5,
-    ),
+      return;
+    }
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+    try {
+    print("DEBUG: Sending request to server...");
+    final response = await http.post(
+      Uri.parse('http://10.0.2.2:5000/api/parcel/create'),
+      headers: {"Content-Type": "application/json"},
+      body: json.encode({
+        "requester_id": widget.studentID,
+        "type": "Parcel",
+        "parcel_qty": parcel_qty,
+        "dropoff_point": _dropOffController.text.trim(),
+        "deliver_to_dorm": _isDorm,        
+        "is_urgent": _isUrgent,
+        "item_price": 0.0,
+        "runner_profit": _totalPrice, 
+        "total_to_collect": _totalPrice,
+      }),
+    ).timeout(const Duration(seconds: 10));
+
+    if (!mounted) return;
+    Navigator.pop(context); // 关掉加载框
+
+    print("SERVER RESPONSE: ${response.body}");// 调试：看清楚后端到底回了什么
+
+    if (response.statusCode == 201|| response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final String? serverOrderId = data['order_id']?.toString();
+
+      if (serverOrderId != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WaitingPage(
+              orderId: serverOrderId,
+              studentID: widget.studentID,
+              totalPrice: _totalPrice,
+              targetPage: ParcelTrackingPage(
+                orderId: serverOrderId,
+                studentID: widget.studentID,
+                totalPrice: _totalPrice,
+              ),
+            ),
+          ),
+        );
+      } else {
+        print("ERROR: order_id is missing in JSON response");
+      }
+    } else {
+      print("SERVER ERROR STATUS: ${response.statusCode}");
+    }
+  } catch (e) {
+    if (mounted) Navigator.pop(context);
+    print("CATCH ERROR: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Connection failed: $e")),
+    );
+  }
+},
+icon: const Icon(Icons.send),
+      label: const Text("Order Now"), 
   ),
 ),
             const SizedBox(height: 20),

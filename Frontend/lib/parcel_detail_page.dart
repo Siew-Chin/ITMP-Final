@@ -1,3 +1,4 @@
+//13
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -18,6 +19,38 @@ class ParcelDetailPage extends StatefulWidget {
 
 class _ParcelDetailPageState extends State<ParcelDetailPage> {
   bool isDetailsConfirmed = false;
+  Map<String, dynamic>? detailedOrder;
+  bool isLoading = true;
+
+  double _parcelPrice(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrderDetails();
+  }
+
+  Future<void> _fetchOrderDetails() async {
+  try {
+    final response = await http.get(
+      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),
+    );
+    if (!mounted) return;
+    if (response.statusCode == 200) {
+      setState(() {
+        detailedOrder = jsonDecode(response.statusCode == 200 ? response.body : "{}");
+        isLoading = false;
+      });
+    }
+  } catch (e) {
+    debugPrint("Fetch Error: $e");
+    setState(() => isLoading = false);
+  }
+}
 
   Future<void> _takeOrder() async {
     // Line 23: Update the URL to API Route 5 from your documentation
@@ -29,18 +62,20 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.order['order_id'],
-          "next_status":
-              1, // API List requires 'next_status' instead of status_code
+          "status_code": 1,
           "runner_id": widget.runnerId,
         }),
       );
-      // Lines 33 and onwards stay the same for navigation logic
+
+      debugPrint("Response Status: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
+      
       if (response.statusCode == 200) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => ActiveParcelTaskPage(
-              order: widget.order,
+              order: detailedOrder ?? widget.order,
               runnerId: widget.runnerId,
             ),
           ),
@@ -49,10 +84,28 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
     } catch (e) {
       debugPrint("Error: $e");
     }
+
+    print("Sending order_id: ${widget.order['order_id']}");
+    print("With runner_id: ${widget.runnerId}");
   }
 
   @override
   Widget build(BuildContext context) {
+
+    double itemPrice = _parcelPrice(
+      detailedOrder?['item_price'] ?? widget.order['item_price'],
+    );
+
+    double runnerProfit = _parcelPrice(
+      detailedOrder?['runner_profit'] ?? widget.order['runner_profit'],
+    );
+
+    double totalToCollect = _parcelPrice(
+      detailedOrder?['total_to_collect'] ?? widget.order['total_to_collect'],
+    );
+
+bool isUrgent =
+    detailedOrder?['is_urgent'] ?? widget.order['is_urgent'] ?? false;
     return Scaffold(
       extendBodyBehindAppBar: true,
       // Fix: Set Scaffold background to transparent so the Container gradient shows everywhere
@@ -97,7 +150,7 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
                     borderRadius: BorderRadius.circular(35),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha:0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -109,54 +162,68 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
                       _row(
                         Icons.person,
                         "Customer",
-                        widget.order['customer_name']?.toString() ?? "ABC",
+                        (detailedOrder?['customer_name'] ?? widget.order['customer_name'] ?? "Loading...").toString()
                       ),
                       const SizedBox(height: 10),
                       _row(
                         Icons.phone,
                         "Contact",
-                        widget.order['requester_contact']?.toString() ?? "123",
+                        (detailedOrder?['requester_contact'] ?? widget.order['requester_contact'] ?? "N/A").toString(),
                       ),
                       const Divider(height: 30, color: Colors.black12),
                       _row(
                         Icons.local_shipping,
                         "Pickup",
-                        widget.order['pickup_point']?.toString() ??
-                            "Main Parcel Hub",
+                        (detailedOrder?['pickup_point'] ?? widget.order['pickup_point'] ?? "Main Parcel Hub").toString(),
                       ),
                       const SizedBox(height: 10),
                       _row(
                         Icons.home,
                         "Dropoff",
-                        widget.order['dropoff_point']?.toString() ?? "D1 Dorm",
+                        (detailedOrder?['dropoff_point'] ?? widget.order['dropoff_point'] ?? "D1 Dorm").toString(),
                       ),
-                      const Divider(height: 30, color: Colors.black12),
-                      const Text(
-                        "Parcel Details:",
-                        style: TextStyle(
-                          color: Colors.black45,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        widget.order['shopping_list']?.toString() ??
-                            "Two small Shopee boxes",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF333333),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      const Divider(height: 30, color: Colors.black12),
+                      const SizedBox(height: 10),
                       _row(
-                        Icons.account_balance_wallet,
-                        "Collect Amount",
-                        "RM ${widget.order['total_price']?.toString() ?? '5'}",
+                        Icons.person,
+                        "Quantity",
+                        (detailedOrder?['parcel_qty'] ?? widget.order['parcel_qty'] ?? 0).toString(),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      // --- Pricing Section ---
+                      if (itemPrice > 0)
+                        _row(
+                          Icons.shopping_bag,
+                          "Item Price",
+                          "RM ${itemPrice.toStringAsFixed(2)}",
+                        ),
+
+                      const SizedBox(height: 10),
+
+                      _row(
+                        Icons.attach_money,
+                        "Your Profit",
+                        "RM ${runnerProfit.toStringAsFixed(2)}",
+                      ),
+
+                      if (isUrgent)
+                        const SizedBox(height: 10),
+
+                      if (isUrgent)
+                        _row(
+                          Icons.bolt,
+                          "Urgent Included",
+                          "YES",
+                        ),
+
+                      const Divider(height: 30, color: Colors.black12),
+
+                      _row(
+                        Icons.payments,
+                        "Total To Collect",
+                        "RM ${totalToCollect.toStringAsFixed(2)}",
                       ),
                       const SizedBox(height: 25),
-                      _noteBox(),
+                      _noteBox(totalToCollect),
                       const SizedBox(height: 20),
                       _checkboxArea(),
                     ],
@@ -173,24 +240,26 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
     );
   }
 
-  Widget _noteBox() {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.redAccent.withOpacity(0.15)),
+  Widget _noteBox(double collectAmount) {
+  return Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.red.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(
+        color: Colors.redAccent.withValues(alpha: 0.15),
       ),
-      child: const Text(
-        "Note: Please go to the dorm and take the student id card to get the parcel. After drop the parcel, remember to collect money from customer.",
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.redAccent,
-          fontWeight: FontWeight.w500,
-        ),
+    ),
+    child: Text(
+      "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery.",
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.redAccent,
+        fontWeight: FontWeight.w500,
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _row(IconData icon, String label, String value) {
     return Row(

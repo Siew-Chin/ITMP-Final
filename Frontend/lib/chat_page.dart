@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 //Chat page
 class ChatPage extends StatefulWidget {
   final String studentID;
-  const ChatPage({super.key, required this.studentID});
+  final String? runnerID;
+
+  const ChatPage({
+    super.key, 
+    required this.studentID,
+    this.runnerID,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -23,47 +31,86 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    client = StreamChatClient('659pk8bnxecv', logLevel: Level.INFO);
     setupChat();
   }
 
+
   Future<void> setupChat() async {
-    try {
-      client = StreamChatClient(
-        'b67pax5b2wdq',
-        logLevel: Level.INFO,
-      );
-      print("👤 Connecting user: ${widget.studentID}");
-      //Connect user
+    if (widget.runnerID == null) {
+      setState(() {
+        errorMessage = "runnerID is null";
+        isLoading = false;
+      });
+      return;
+    }
+  try {
+    // 1. 检查是否已经连了别的人，有则断开
+    if (client.state.currentUser != null && client.state.currentUser!.id != widget.studentID) {
+      await client.disconnectUser();
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+
+    // 2. 获取 Token 并登录当前用户 (ABC)
+    if (client.state.currentUser == null) {
+      final response = await http.get(Uri.parse("http://10.0.2.2:5000/get_token/${widget.studentID}"));
+      if (response.statusCode != 200) {
+          throw Exception("Token API failed");
+        }
+        
+      final token = jsonDecode(response.body)['token'];
+      
+      if (token == null) {
+          throw Exception("Token is null");
+      }
+
       await client.connectUser(
-        User(id: '${widget.studentID}'),
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidHV0b3JpYWwtZmx1dHRlciJ9.S-MJpoSwDiqyXpUURgO5wVqJ4vKlIVFLSEyrFYCOE1c',
+        User(id: widget.studentID, name: 'User ${widget.studentID}'),
+        token,
       );
-      final newChannel = client.channel(
-        'messaging',
-        id: 'order_channel_tutorial',
-      );
+    }
 
-      await newChannel.watch();
+    // 3. 更新对方信息 (注意：这里最好也加上 null 检查)
 
-      //Update UI
-      if (!mounted) return;
-      setState(() {
-        channel = newChannel;
-        isLoading = false;
-      });
+    if (widget.runnerID != null) {
+      await client.updateUsers([
+        User(id: widget.runnerID!, name: 'Runner ${widget.runnerID}'),
+      ]);
+    }
+
+    // 4. 创建并观察频道
+    final ids = [widget.studentID, widget.runnerID!]..sort();
+    final channelId = "chat_${ids[0]}_${ids[1]}";
+    final localChannel = client.channel(
+      'messaging',
+      id: channelId,
+      extraData: {
+        'members': [widget.studentID, widget.runnerID!],
+      },
+    );
+
+    await localChannel.watch();
+
+    // 5. 更新 UI 状态
+    if (mounted) {
+        setState(() {
+          channel = localChannel;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        errorMessage = e.toString();
-        isLoading = false;
-      });
+      debugPrint("Chat Setup Error: $e");
+      if (mounted) {
+        setState(() {
+          errorMessage = e.toString();
+          isLoading = false;
+        });
+      }
     }
   }
 
   @override
   void dispose() {
-    //Cut down connection when leave the page 
-    client.disconnectUser();
     super.dispose();
   }
 
@@ -98,7 +145,7 @@ class _ChatPageState extends State<ChatPage> {
   client: client,
   child: StreamChannel(
     channel: channel!,
-    child: Scaffold(
+    child: const Scaffold(
       backgroundColor: const Color(0xFFEAF3FF),
       appBar: const StreamChannelHeader(),
       body: Column(

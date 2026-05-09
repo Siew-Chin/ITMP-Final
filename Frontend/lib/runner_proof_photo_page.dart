@@ -1,12 +1,20 @@
+//26
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_new_app/runner_payment_confirm_page.dart';
 
 class RunnerProofPhotoPage extends StatefulWidget {
-  final String studentID;
+  final String orderId;
+  final String runnerId;
 
-  const RunnerProofPhotoPage({super.key, required this.studentID});
+  const RunnerProofPhotoPage({
+    super.key, 
+    required this.orderId,
+    required this.runnerId,
+    });
 
   @override
   State<RunnerProofPhotoPage> createState() => _RunnerProofPhotoPageState();
@@ -15,11 +23,12 @@ class RunnerProofPhotoPage extends StatefulWidget {
 class _RunnerProofPhotoPageState extends State<RunnerProofPhotoPage>{
   File? proofImage;
   final ImagePicker picker = ImagePicker();
+  bool isLoading = false;
 
   //Take photo/Pick photo
   Future<void> takePhoto() async {
   final XFile? pickedImage = await picker.pickImage(
-    source: ImageSource.gallery,
+    source: ImageSource.camera,
     imageQuality: 80,
   );
 
@@ -37,29 +46,99 @@ class _RunnerProofPhotoPageState extends State<RunnerProofPhotoPage>{
   }
 
   //Upload photo and navigate to next page
-  void uploadPhoto(){
-    if (proofImage == null){
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please take a photo first.")),
-      );
-      return;
-    }
+ Future<void> uploadPhoto() async {
+  if (proofImage == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Proof photo uploaded successfully!"))
-   );
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => RunnerPaymentConfirmPage(
-        studentID: widget.studentID, 
-        amount: 3.00, 
-        customerName: "ABC", 
-        customerStudentID: "ABC", 
-        customerContact: "123"
-      ),
-    ),
+      const SnackBar(content: Text("Please take a photo first.")),
     );
+    return;
   }
+
+  setState(() => isLoading = true); // 建议加个 loading 状态
+
+  try {
+    var request = http.MultipartRequest(
+      'POST', 
+      Uri.parse('http://10.0.2.2:5000/api/order/upload_proof')
+    );
+
+    // 2. 添加文字字段
+    request.fields['order_id'] = widget.orderId.trim();
+    request.fields['runner_id'] = widget.runnerId.trim();
+
+    // 3. 添加图片文件
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'proof_image', // 后端接收的 key 名
+        proofImage!.path,
+      ),
+    );
+
+    // 4. 发送请求
+    var streamedResponse = await request.send();
+    var response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      print("Server Error: ${response.body}"); 
+    }
+
+    if (response.statusCode == 200) {
+
+  // GET ORDER SUMMARY
+  final summaryResponse = await http.get(
+    Uri.parse(
+      'http://10.0.2.2:5000/api/order/summary?order_id=${widget.orderId}'
+    ),
+  );
+
+  if (summaryResponse.statusCode == 200) {
+
+    final data = jsonDecode(summaryResponse.body);
+
+    print("API Summary Data: $data");
+
+    if (!mounted) return;
+
+    // 定义一个安全的双精度转换函数
+    double tryParseDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+// 在 Navigator 处使用
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RunnerPaymentConfirmPage(
+          studentID: widget.runnerId,
+          // 更加稳健的金额解析
+          amount: tryParseDouble(data['total_price']), 
+          
+          // 增加多重兜底，防止后端字段名变动
+          customerName: data['user_name'] ?? data['customer_name'] ?? "Customer",
+          customerStudentID: data['user_id'] ?? data['requester_id'] ?? "Unknown",
+          customerContact: data['user_contact'] ?? data['requester_contact'] ?? "N/A",
+          orderId: widget.orderId,
+        ),
+      ),
+    );
+
+  } else {
+    throw Exception("Failed to load order summary");
+  }
+
+}
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e")),
+    );
+  } finally {
+    setState(() => isLoading = false);
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,11 +194,11 @@ class _RunnerProofPhotoPageState extends State<RunnerProofPhotoPage>{
                   width: double.infinity,
                   height: 320,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha:0.9),
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withValues(alpha:0.06),
                         blurRadius: 12,
                         offset: const Offset(0, 5),
                       ),
@@ -164,7 +243,7 @@ class _RunnerProofPhotoPageState extends State<RunnerProofPhotoPage>{
                                 child: Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.5),
+                                    color: Colors.black.withValues(alpha:0.5),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Column(
@@ -172,7 +251,7 @@ class _RunnerProofPhotoPageState extends State<RunnerProofPhotoPage>{
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        "Runner: ${widget.studentID}",
+                                        "Runner: ${widget.runnerId}",
                                         style: const TextStyle(
                                             color: Colors.white, fontSize: 12),
                                       ),

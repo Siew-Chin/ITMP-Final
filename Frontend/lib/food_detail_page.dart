@@ -1,3 +1,4 @@
+//15
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -6,8 +7,11 @@ import 'active_food_task_page.dart';
 class FoodDetailPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
-  const FoodDetailPage({Key? key, required this.order, required this.runnerId})
-    : super(key: key);
+  const FoodDetailPage({
+    Key? key, 
+    required this.order, 
+    required this.runnerId})
+      : super(key: key);
 
   @override
   State<FoodDetailPage> createState() => _FoodDetailPageState();
@@ -15,47 +19,109 @@ class FoodDetailPage extends StatefulWidget {
 
 class _FoodDetailPageState extends State<FoodDetailPage> {
   bool isDetailsConfirmed = false;
+  Map<String, dynamic>? detailedOrder;
+  bool isLoading = true;
+
+  double _foodPrice(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrderDetails();
+  }
+
+  Future<void> _fetchOrderDetails() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}',
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        setState(() {
+          detailedOrder = jsonDecode(response.body);
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Fetch Error: $e");
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   Future<void> _takeOrder() async {
-    // Line 20: Updated to API Route 5 (Update Status)
     final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
-
     try {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.order['order_id'],
-          "next_status": 1, // Uses 'next_status' as required by API List
+          "status_code": 1, 
           "runner_id": widget.runnerId,
         }),
       );
+
+      debugPrint("Response Status: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
+
       if (response.statusCode == 200) {
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => ActiveFoodTaskPage(
-              order: widget.order,
+              order: detailedOrder ?? widget.order,
               runnerId: widget.runnerId,
             ),
           ),
         );
       }
     } catch (e) {
-      debugPrint("Error: $e");
+      debugPrint("Take Order Error: $e");
     }
   }
 
+ 
   @override
   Widget build(BuildContext context) {
+    double itemPrice = _foodPrice(
+      detailedOrder?['item_price'] ?? widget.order['item_price'],
+    );
+
+    double runnerProfit = _foodPrice(
+      detailedOrder?['runner_profit'] ?? widget.order['runner_profit'],
+    );
+
+    double totalToCollect = _foodPrice(
+      detailedOrder?['total_to_collect'] ?? widget.order['total_to_collect'],
+    );
+
+bool isUrgent =
+    detailedOrder?['is_urgent'] ?? widget.order['is_urgent'] ?? false;
+    
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
-      ),
+        backgroundColor: Colors.transparent, 
+        elevation: 0, 
+        iconTheme: const IconThemeData(color: Colors.black87),),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -63,18 +129,19 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF4E6), Color(0xFFFFE8CC), Color(0xFFFFD8A8)],
+            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
           ),
         ),
         child: SafeArea(
-          bottom: false,
+          bottom:
+              false, // Fix: Allow gradient to bleed into the bottom navigation area
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
             child: Column(
               children: [
                 const SizedBox(height: 10),
                 const Text(
-                  "Food Detail",
+                  "Food Details",
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -90,7 +157,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                     borderRadius: BorderRadius.circular(35),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha:0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -100,31 +167,41 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _row(
-                        Icons.restaurant,
-                        "Stall",
-                        widget.order['shop_name']?.toString() ?? "Subway",
+                        Icons.person,
+                        "Customer",
+                        (detailedOrder?['customer_name'] ?? widget.order['customer_name'] ?? "Loading...")
                       ),
                       const SizedBox(height: 10),
                       _row(
-                        Icons.location_on,
-                        "Dropoff",
-                        widget.order['dropoff_point']?.toString() ?? "G1 Dorm",
+                        Icons.phone,
+                        "Contact",
+                        (detailedOrder?['requester_contact'] ?? widget.order['requester_contact'] ?? "123"),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      _row(
+                        Icons.storefront,
+                        "Food Stall",
+                        (detailedOrder?['stall_name']
+                            ?? widget.order['stall_name']
+                            ?? "Unknown Stall"),
                       ),
                       const Divider(height: 30, color: Colors.black12),
                       _row(
                         Icons.fastfood,
-                        "Food Price",
-                        "RM ${widget.order['food_price']?.toString() ?? '12.5'}",
+                        "Food",
+                        (detailedOrder?['food_name']
+                            ?? widget.order['food_name']
+                            ?? "Unknown Food"),
                       ),
                       const SizedBox(height: 10),
                       _row(
-                        Icons.account_balance_wallet,
-                        "Your Earning",
-                        "RM ${widget.order['delivery_fee']?.toString() ?? '3.0'}",
+                        Icons.home,
+                        "Dropoff",
+                        (detailedOrder?['dropoff_point'] ?? widget.order['dropoff_point'] ?? "D1 Dorm"),
                       ),
                       const Divider(height: 30, color: Colors.black12),
                       const Text(
-                        "Order Details:",
+                        "Food Details:",
                         style: TextStyle(
                           color: Colors.black45,
                           fontSize: 14,
@@ -133,16 +210,49 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        widget.order['shopping_list']?.toString() ??
-                            "Extra spicy sauce please",
+                        (detailedOrder?['food_details'] ?? widget.order['food_details'] ?? "No details available"),
                         style: const TextStyle(
                           fontSize: 16,
                           color: Color(0xFF333333),
                           fontStyle: FontStyle.italic,
                         ),
                       ),
+                      const Divider(height: 30, color: Colors.black12),
+                      // --- Pricing Section ---
+                      if (itemPrice > 0)
+                        _row(
+                          Icons.shopping_bag,
+                          "Item Price",
+                          "RM ${itemPrice.toStringAsFixed(2)}",
+                        ),
+
+                      const SizedBox(height: 10),
+
+                      _row(
+                        Icons.attach_money,
+                        "Your Profit",
+                        "RM ${runnerProfit.toStringAsFixed(2)}",
+                      ),
+
+                      if (isUrgent)
+                        const SizedBox(height: 10),
+
+                      if (isUrgent)
+                        _row(
+                          Icons.bolt,
+                          "Urgent Included",
+                          "YES",
+                        ),
+
+                      const Divider(height: 30, color: Colors.black12),
+
+                      _row(
+                        Icons.payments,
+                        "Total To Collect",
+                        "RM ${totalToCollect.toStringAsFixed(2)}",
+                      ),
                       const SizedBox(height: 25),
-                      _noteBox(),
+                      _noteBox(totalToCollect),
                       const SizedBox(height: 20),
                       _checkboxArea(),
                     ],
@@ -150,7 +260,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
                 ),
                 const SizedBox(height: 40),
                 _btn(),
-                const SizedBox(height: 40),
+                const SizedBox(height: 40), // Bottom padding for clean look
               ],
             ),
           ),
@@ -159,44 +269,40 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
     );
   }
 
-  Widget _noteBox() {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.redAccent.withOpacity(0.15)),
+  // --- UI 组件保持不变 ---
+   Widget _noteBox(double collectAmount) {
+  return Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.red.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(
+        color: Colors.redAccent.withValues(alpha: 0.15),
       ),
-      child: const Text(
-        "Note: Please check the food items carefully. Ensure the packaging is secure before delivery. Collect money from customer upon arrival.",
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.redAccent,
-          fontWeight: FontWeight.w500,
-        ),
+    ),
+    child: Text(
+      "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery.",
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.redAccent,
+        fontWeight: FontWeight.w500,
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _row(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.orange, size: 22),
-        const SizedBox(width: 12),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.black45, fontSize: 15),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: Color(0xFF333333),
-          ),
-        ),
-      ],
+  Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF6C8EF5), size: 20),
+          const SizedBox(width: 10),
+          Text(label, style: const TextStyle(color: Colors.black54)),
+          const Spacer(),
+          Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: valueColor ?? Colors.black87)),
+        ],
+      ),
     );
   }
 
@@ -213,7 +319,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
           style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
         value: isDetailsConfirmed,
-        activeColor: Colors.orange,
+        activeColor: const Color(0xFF4A90E2),
         onChanged: (v) => setState(() => isDetailsConfirmed = v ?? false),
         controlAffinity: ListTileControlAffinity.leading,
       ),
@@ -224,14 +330,14 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: isDetailsConfirmed
-            ? Colors.orange
+            ? const Color(0xFF4A90E2)
             : Colors.grey.shade300,
         minimumSize: const Size(double.infinity, 65),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
       onPressed: isDetailsConfirmed ? _takeOrder : null,
       child: const Text(
-        "Take Food Order",
+        "Take Order",
         style: TextStyle(
           color: Colors.white,
           fontSize: 18,

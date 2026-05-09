@@ -119,7 +119,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -243,9 +243,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF6C8EF5),
                           foregroundColor: Colors.white,
-                          padding:EdgeInsets.symmetric(vertical: 16),
+                          padding:const EdgeInsets.symmetric(vertical: 16),
                           elevation: 5,
-                          shadowColor: Colors.blue.withOpacity(0.3),
+                          shadowColor: Colors.blue.withValues(alpha:0.3),
                           shape:RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(25),
                           ),

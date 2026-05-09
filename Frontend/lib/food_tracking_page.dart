@@ -1,13 +1,21 @@
+//5
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'chat_page.dart'; 
+import 'user_proof_photo_page.dart'; // 确保你有这个页面
 
 class FoodTrackingPage extends StatefulWidget {
   final String orderId;
   final double totalPrice;
+  final String studentID; // 补充必填的 studentID
 
   const FoodTrackingPage({
     super.key,
-    this.orderId = "FOOD789", // 默认订单号
-    this.totalPrice = 0.0,    // 接收上一页传来的总价
+    required this.orderId,      
+    required this.totalPrice,   
+    required this.studentID,
   });
 
   @override
@@ -15,30 +23,44 @@ class FoodTrackingPage extends StatefulWidget {
 }
 
 class _FoodTrackingPageState extends State<FoodTrackingPage> {
-  // 模拟状态码 (1: Order Taken, 2: Food Ordered, 3: Food Delivering, 4: Order Dropped)
-  int _currentStatus = 1;
-  bool _isLoading = false;
+  // 状态码 (1: Order Taken, 2: Food Ordered, 3: Food Delivering, 4: Order Dropped)
+  int _currentStatus = 0; 
+  String? _runnerId;
+  String? _proofImageUrl; 
+  Timer? _timer;
 
-  // 模拟执行 API 4: 获取实时进度 (GET /api/order/tracking)
+  @override
+  void initState() {
+    super.initState();
+    _fetchFoodStatus(); // 初始化查询
+    // 设置每 3 秒轮询一次 API 4
+    _timer = Timer.periodic(const Duration(seconds: 3), (t) => _fetchFoodStatus());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // 销毁页面时停止轮询
+    super.dispose();
+  }
+
+  // --- API 调用：获取实时进度 ---
   Future<void> _fetchFoodStatus() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // 模拟网络延迟
-    await Future.delayed(const Duration(milliseconds: 1500));
-
-    setState(() {
-      // 模拟跑腿员在另一端操作，状态递增
-      if (_currentStatus < 4) {
-        _currentStatus++;
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _currentStatus = data['status_code'] ?? 0;
+            _runnerId = data['runner_id'];
+            _proofImageUrl = data['proof_photo'];
+          });
+        }
       }
-      _isLoading = false;
-    });
-    
-    // 实际对接时使用：
-    // var response = await http.get(Uri.parse('.../api/order/tracking?order_id=${widget.orderId}'));
-    // setState(() { _currentStatus = jsonDecode(response.body)['status_code']; });
+    } catch (e) {
+      debugPrint("Food Polling error: $e");
+    }
   }
 
   @override
@@ -46,28 +68,34 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
     return Scaffold(
       backgroundColor: Colors.blue[50],
       appBar: AppBar(
-        title: const Text(
-          'Food Delivering', // 顶部标题
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-        ),
+        title: const Text('Food Delivering', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: const IconThemeData(color: Colors.black),
         actions: [
-          // Chat 标志
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-            onPressed: () => print("Open Chat with Runner"),
-          ),
+          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
+          if (_currentStatus > 0 && _runnerId != null) 
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+              onPressed: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => ChatPage(
+                      studentID: widget.studentID,
+                      runnerID: _runnerId!, 
+                    ),
+                  ),
+                );
+              },
+            ),
         ],
       ),
-      // 下拉刷新组件
       body: RefreshIndicator(
         onRefresh: _fetchFoodStatus,
-        color: Colors.blue,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -78,94 +106,89 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
                   style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
                 ),
               ),
-              const SizedBox(height: 10),
-              // 下拉刷新提示
-              const Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.keyboard_double_arrow_down, color: Colors.grey, size: 16),
-                    Text(" Swipe down to refresh status", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  ],
-                ),
-              ),
               const SizedBox(height: 40),
 
-              // 4 点进度图 (点与横线连接)
+              // 进度条
               _buildFoodTimeline(),
 
               const SizedBox(height: 50),
 
-              // 订单总价显示卡片
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, spreadRadius: 2)
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Order Total",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey),
-                    ),
-                    Text(
-                      "RM ${widget.totalPrice.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
-                    ),
-                  ],
-                ),
-              ),
+              // 价格卡片
+              _buildPriceCard(),
             ],
           ),
         ),
       ),
-      // 底部 Receive 按钮
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: ElevatedButton(
-            // 逻辑：只有 4 个点全部黑完 (_currentStatus == 4) 才能点击
-            onPressed: _currentStatus == 4 
-              ? () => print("Order Received!") 
-              : null, 
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A), // 深蓝色
-              disabledBackgroundColor: Colors.grey[300], // 浅色 (未完成状态)
-              disabledForegroundColor: Colors.grey[600],
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              elevation: _currentStatus == 4 ? 5 : 0,
+      bottomNavigationBar: _buildBottomButton(),
+    );
+  }
+
+  Widget _buildPriceCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha:0.1), blurRadius: 10, spreadRadius: 2)],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "Total To Pay", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)
             ),
-            child: Text(
-              _currentStatus == 4 ? "Receive" : "Food is on the way...",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+          Text("RM ${widget.totalPrice.toStringAsFixed(2)}", 
+               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomButton() {
+    // 只有状态为 4 且后端上传了照片才能点击 Continue
+    bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: ElevatedButton(
+          onPressed: canContinue ? () {
+              _timer?.cancel();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProofPhotoPage(
+                    studentID: widget.studentID,
+                    orderId: widget.orderId,
+                    imageUrl: _proofImageUrl!,
+                  ),
+                ),
+              );
+            } : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1E3A8A),
+            disabledBackgroundColor: Colors.grey[300],
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          ),
+          child: Text(
+            _currentStatus == 4 ? "Receive & View Proof" : "Food is on the way...",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
       ),
     );
   }
 
-  // 构建外卖专用进度条
+  // --- 进度条构建组件 ---
   Widget _buildFoodTimeline() {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildStepDot(1),
-            _buildStepLine(1),
-            _buildStepDot(2),
-            _buildStepLine(2),
-            _buildStepDot(3),
-            _buildStepLine(3),
-            _buildStepDot(4),
+            _buildStepDot(1), _buildStepLine(1), _buildStepDot(2), _buildStepLine(2), _buildStepDot(3), _buildStepLine(3), _buildStepDot(4),
           ],
         ),
         const SizedBox(height: 12),
@@ -185,12 +208,8 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
   Widget _buildStepDot(int step) {
     bool active = _currentStatus >= step;
     return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: active ? Colors.black87 : Colors.grey[300],
-        shape: BoxShape.circle,
-      ),
+      width: 22, height: 22,
+      decoration: BoxDecoration(color: active ? Colors.black87 : Colors.grey[300], shape: BoxShape.circle),
       child: active ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
     );
   }
@@ -204,14 +223,8 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
     bool active = _currentStatus >= step;
     return SizedBox(
       width: 70,
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: active ? FontWeight.bold : FontWeight.normal,
-          color: active ? Colors.black87 : Colors.grey,
-        ),
+      child: Text(text, textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? Colors.black87 : Colors.grey),
       ),
     );
   }

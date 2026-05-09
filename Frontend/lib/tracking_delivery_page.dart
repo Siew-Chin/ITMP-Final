@@ -1,257 +1,230 @@
+//11
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'chat_page.dart';
+import 'user_proof_photo_page.dart';
 
 class TrackingDeliveryPage extends StatefulWidget {
   final String orderId;
-  const TrackingDeliveryPage({Key? key, required this.orderId})
-    : super(key: key);
+  final String studentID; // 必填：用于 Chat
+  final double totalPrice; // 初始价格
+
+  const TrackingDeliveryPage({
+    super.key, 
+    required this.orderId, 
+    required this.studentID,
+    required this.totalPrice,
+  });
 
   @override
-  _TrackingDeliveryPageState createState() => _TrackingDeliveryPageState();
+  State<TrackingDeliveryPage> createState() => _TrackingDeliveryPageState();
 }
 
 class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
-  int currentStatus = 0;
+  // 状态码 (1: Order Taken, 2: Food Ordered, 3: Food Delivering, 4: Order Dropped)
+  int _currentStatus = 0; 
+  String? _runnerId;
+  String? _proofImageUrl; 
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _fetchProgress();
-    _timer = Timer.periodic(
-      const Duration(seconds: 5),
-      (timer) => _fetchProgress(),
-    );
+    _fetchOrderStatus(); // 初始化查询
+    // 设置每 3 秒轮询一次 API 4
+    _timer = Timer.periodic(const Duration(seconds: 3), (t) => _fetchOrderStatus());
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _timer?.cancel(); // 销毁页面时停止轮询
     super.dispose();
   }
 
-  Future<void> _fetchProgress() async {
-    final url = Uri.parse(
-      'http://10.0.2.2:5000/api/order/tracking?order_id=${widget.orderId}',
-    );
+  // --- API 调用：获取实时进度 ---
+  Future<void> _fetchOrderStatus() async {
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        setState(() {
-          currentStatus = jsonDecode(response.body)['status_code'] ?? 0;
-        });
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _currentStatus = data['status_code'] ?? 0;
+            _runnerId = data['runner_id'];
+            _proofImageUrl = data['proof_photo'];
+          });
+        }
       }
     } catch (e) {
-      debugPrint("Error: $e");
+      debugPrint("Food Polling error: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.blue[50],
       appBar: AppBar(
-        title: const Text(
-          "Track Delivery",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Item Delivering', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+        actions: [
+          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
+          if (_currentStatus > 0 && _runnerId != null) 
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+              onPressed: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => ChatPage(
+                      studentID: widget.studentID,
+                      runnerID: _runnerId!, 
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+      body: RefreshIndicator(
+        onRefresh: _fetchOrderStatus,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  "Order ID: ${widget.orderId}",
+                  style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 40),
+
+              // 进度条
+              _buildItemTimeline(),
+
+              const SizedBox(height: 50),
+
+              // 价格卡片
+              _buildPriceCard(),
+            ],
           ),
         ),
-        child: SafeArea(
-          child: Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 25),
-              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.white.withOpacity(0.5)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.1),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // --- MODERN TIMELINE ---
-                  _buildTimeline(),
+      ),
+      bottomNavigationBar: _buildBottomButton(),
+    );
+  }
 
-                  const SizedBox(height: 50),
-
-                  // --- GLOWING CHAT BUTTON ---
-                  InkWell(
-                    onTap: () {}, // Navigate to Chat
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_rounded,
-                            color: Colors.blueAccent,
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                            "Chat with Runner",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blueAccent,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  Text(
-                    "Reminder: Amount to pay",
-                    style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                  ),
-                  const Text(
-                    "RM 5.00",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // --- RECEIVED BUTTON (Only shows when status is 4) ---
-                  if (currentStatus == 4) _buildReceivedButton(),
-                ],
-              ),
+  Widget _buildPriceCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha:0.1), blurRadius: 10, spreadRadius: 2)],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "Total To Pay", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)
             ),
+          Text("RM ${widget.totalPrice.toStringAsFixed(2)}", 
+               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomButton() {
+    // 只有状态为 4 且后端上传了照片才能点击 Continue
+    bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: ElevatedButton(
+          onPressed: canContinue ? () {
+              _timer?.cancel();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProofPhotoPage(
+                    studentID: widget.studentID,
+                    orderId: widget.orderId,
+                    imageUrl: _proofImageUrl!,
+                  ),
+                ),
+              );
+            } : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1E3A8A),
+            disabledBackgroundColor: Colors.grey[300],
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          ),
+          child: Text(
+            _currentStatus == 4 ? "Receive & View Proof" : "Item is delivering...",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTimeline() {
-    List<String> labels = ["Taken", "Picking", "Picked", "Dropped"];
+  // --- 进度条构建组件 ---
+  Widget _buildItemTimeline() {
     return Column(
       children: [
-        Stack(
-          alignment: Alignment.center,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Background line
-            Container(
-              height: 3,
-              width: double.infinity,
-              color: Colors.grey[300],
-            ),
-            // Progress line
-            Row(
-              children: [
-                Expanded(
-                  flex: currentStatus > 0 ? currentStatus - 1 : 0,
-                  child: Container(height: 3, color: Colors.blueAccent),
-                ),
-                Expanded(flex: 4 - currentStatus, child: Container()),
-              ],
-            ),
-            // Dots
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(4, (index) {
-                bool isActive = currentStatus >= (index + 1);
-                return _buildDot(isActive);
-              }),
-            ),
+            _buildStepDot(1), _buildStepLine(1), _buildStepDot(2), _buildStepLine(2), _buildStepDot(3), _buildStepLine(3), _buildStepDot(4),
           ],
         ),
-        const SizedBox(height: 15),
+        const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: labels
-              .map(
-                (label) => Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: labels.indexOf(label) + 1 <= currentStatus
-                        ? Colors.blueAccent
-                        : Colors.grey[400],
-                  ),
-                ),
-              )
-              .toList(),
+          children: [
+            _buildStepLabel("Order\nTaken", 1),
+            _buildStepLabel("Item\nPicking", 2),
+            _buildStepLabel("Item\nPicked", 3),
+            _buildStepLabel("Order\nDropped", 4),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildDot(bool active) {
+  Widget _buildStepDot(int step) {
+    bool active = _currentStatus >= step;
     return Container(
-      width: 16,
-      height: 16,
-      decoration: BoxDecoration(
-        color: active ? Colors.blueAccent : Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: active ? Colors.blueAccent : Colors.grey[300]!,
-          width: 3,
-        ),
-        boxShadow: active
-            ? [BoxShadow(color: Colors.blue.withOpacity(0.4), blurRadius: 6)]
-            : [],
-      ),
+      width: 22, height: 22,
+      decoration: BoxDecoration(color: active ? Colors.black87 : Colors.grey[300], shape: BoxShape.circle),
+      child: active ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
     );
   }
 
-  Widget _buildReceivedButton() {
-    return Container(
-      width: double.infinity,
-      height: 55,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4A90E2), Color(0xFF007AFF)],
-        ),
-      ),
-      child: const Center(
-        child: Text(
-          "Received Item",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
+  Widget _buildStepLine(int step) {
+    bool active = _currentStatus > step;
+    return Expanded(child: Container(height: 3, color: active ? Colors.black87 : Colors.grey[300]));
+  }
+
+  Widget _buildStepLabel(String text, int step) {
+    bool active = _currentStatus >= step;
+    return SizedBox(
+      width: 70,
+      child: Text(text, textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? Colors.black87 : Colors.grey),
       ),
     );
   }

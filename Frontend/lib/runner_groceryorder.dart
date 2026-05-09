@@ -2,310 +2,363 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'runner_grocerydrop.dart'; // 确保文件名正确
+import 'runner_grocerydrop.dart'; 
 
 class RunnerGroceryOrder extends StatefulWidget {
-  final String orderId;
-
-  const RunnerGroceryOrder({super.key, required this.orderId});
+  final dynamic order;
+  final String runnerId;
+    const RunnerGroceryOrder({
+    Key? key, 
+    required this.order, 
+    required this.runnerId})
+      : super(key: key);
 
   @override
   State<RunnerGroceryOrder> createState() => _RunnerGroceryOrderState();
 }
 
 class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
-  bool _isLoading = true;
-  bool _isSubmitting = false;
-  Map<String, dynamic> _orderData = {};
+  bool isDetailsConfirmed = false;
+  Map<String, dynamic>? detailedOrder;
+  bool isLoading = true;
+
 
   @override
   void initState() {
     super.initState();
-    _fetchOrderDetail();
+    _fetchOrderDetails();
   }
 
-  // --- 1. 获取订单详情 ---
-  Future<void> _fetchOrderDetail() async {
-    // 确保使用 10.0.2.2 访问电脑本地后端
-    final String url =
-        'http://10.0.2.2:5000/api/order/detail/${widget.orderId}';
+  Future<void> _fetchOrderDetails() async {
     try {
-      final response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 5));
+      final response = await http.get(
+        Uri.parse(
+          'http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}',
+        ),
+      );
+
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         setState(() {
-          _orderData = json.decode(response.body);
-          _isLoading = false;
+          detailedOrder = jsonDecode(response.body);
+          isLoading = false;
         });
       } else {
-        debugPrint("Server return error: ${response.statusCode}");
-        _loadMockData();
+        setState(() {
+          isLoading = false;
+        });
       }
     } catch (e) {
       debugPrint("Fetch Error: $e");
-      _loadMockData();
+
+      if (!mounted) return;
+
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  void _loadMockData() {
-    setState(() {
-      _orderData = {
-        "requester_id": "Test User (Mock)",
-        "dropoff_point": "Block A, Level 3",
-        "requester_contact": "012-3456789",
-        "shop_name": "Lotus's Supermarket",
-        "shopping_list": ["Milk x1", "Bread x2"],
-        "delivery_fee": 5.00,
-      };
-      _isLoading = false;
-    });
-  }
-
-  // --- 2. 核心修复：Take Order 逻辑 ---
-  Future<void> _handleTakeOrder() async {
-    setState(() => _isSubmitting = true);
-
-    final String url = 'http://10.0.2.2:5000/api/order/take';
-
+  Future<void> _takeOrder() async {
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
     try {
-      // 这里的 body 必须与 Backend.py 的接收逻辑严格对应
-      final response = await http
-          .post(
-            Uri.parse(url),
-            headers: {"Content-Type": "application/json"},
-            body: json.encode({
-              "order_id": widget.orderId, // 这里传的是从列表页解析出来的数据库 ID
-              "status": 1, // 状态从 0 改为 1
-              "runner_id": "FIT2508089", // 固定的学生 ID
-            }),
-          )
-          .timeout(const Duration(seconds: 5));
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "order_id": widget.order['order_id'],
+          "status_code": 1, 
+          "runner_id": widget.runnerId,
+        }),
+      );
+
+      debugPrint("Response Status: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
-        _showSnackBar("Order Accepted Successfully!");
-        _navigateToDropPage();
-      } else {
-        // 如果后端返回 404/500，打印错误方便调试
-        debugPrint("Update Failed: ${response.body}");
-        _showSnackBar("Update failed. Entering Test Mode...");
-        _navigateToDropPage();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RunnerGroceryDrop(
+              order: detailedOrder ?? widget.order,
+              runnerId: widget.runnerId,
+            ),
+          ),
+        );
       }
     } catch (e) {
-      debugPrint("Network Error: $e");
-      _showSnackBar("Network error. Entering Test Mode...");
-      _navigateToDropPage();
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      debugPrint("Take Order Error: $e");
     }
   }
 
-  void _navigateToDropPage() {
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RunnerGroceryDrop(orderId: widget.orderId),
-      ),
-    );
-  }
+  double _parsePrice(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
 
-  void _showSnackBar(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-  }
-
-  // 格式化清单逻辑
   String _formatShoppingList(dynamic list) {
     if (list == null) return "No items";
     if (list is List) {
-      return list
-          .map((e) {
-            if (e is Map) return "• ${e['item_name'] ?? e.toString()}";
-            return "• $e";
-          })
-          .join("\n");
+      return list.map((e) => "• $e").join("\n");
     }
     return list.toString();
   }
 
-  String _safeGet(dynamic value) {
-    if (value == null) return "N/A";
-    return value.toString();
-  }
-
+ 
   @override
   Widget build(BuildContext context) {
+    double itemPrice = _parsePrice(
+      detailedOrder?['item_price'] ?? widget.order['item_price'],
+    );
+
+    double runnerProfit = _parsePrice(
+      detailedOrder?['runner_profit'] ?? widget.order['runner_profit'],
+    );
+
+    double totalToCollect = _parsePrice(
+      detailedOrder?['total_to_collect'] ?? widget.order['total_to_collect'],
+    );
+
+    bool isUrgent =
+    detailedOrder?['is_urgent'] ?? widget.order['is_urgent'] ?? false;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F7FF),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Order Detail',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        backgroundColor: Colors.transparent, 
+        elevation: 0, 
+        iconTheme: const IconThemeData(color: Colors.black87),),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+          ),
         ),
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
+        child: SafeArea(
+          bottom:
+              false, // Fix: Allow gradient to bleed into the bottom navigation area
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+            child: Column(
               children: [
-                SingleChildScrollView(
-                  padding: const EdgeInsets.all(20.0),
+                const SizedBox(height: 10),
+                const Text(
+                  "Grocery Details",
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF333333),
+                  ),
+                ),
+                const SizedBox(height: 25),
+
+                Container(
+                  padding: const EdgeInsets.all(25),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(35),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha:0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 订单基础信息卡片
-                      _buildSectionCard(
-                        child: Column(
-                          children: [
-                            _buildField(
-                              'Name :',
-                              _safeGet(_orderData['requester_id']),
-                            ),
-                            _buildField('Order ID :', widget.orderId),
-                            _buildField(
-                              'Dorm :',
-                              _safeGet(_orderData['dropoff_point']),
-                            ),
-                            _buildField(
-                              'Contact :',
-                              _safeGet(_orderData['requester_contact']),
-                            ),
-                          ],
+                      _row(
+                        Icons.person,
+                        "Customer",
+                        (detailedOrder?['customer_name'] ?? widget.order['customer_name'] ?? "Loading...")
+                      ),
+                      const SizedBox(height: 10),
+                      _row(
+                        Icons.phone,
+                        "Contact",
+                        (detailedOrder?['requester_contact'] ?? widget.order['requester_contact'] ?? "123"),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      _row(
+                        Icons.storefront,
+                        "Grocery Store",
+                        (detailedOrder?['shop_name']
+                            ?? widget.order['shop_name']
+                            ?? "Unknown Shop"),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      _row(
+                        Icons.shopping_cart,
+                        "Shopping List",
+                         _formatShoppingList(detailedOrder?['shopping_list'] ?? widget.order['shopping_list']),
+                      ),
+                      const SizedBox(height: 10),
+                      _row(
+                        Icons.home,
+                        "Dropoff",
+                        (detailedOrder?['dropoff_point'] ?? widget.order['dropoff_point'] ?? "D1 Dorm"),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      const Text(
+                        "Grocery Details:",
+                        style: TextStyle(
+                          color: Colors.black45,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const SizedBox(height: 5),
+                      Text(
+                        (detailedOrder?['shopping_details'] ?? widget.order['shopping_details'] ?? "No details available"),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF333333),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const Divider(height: 30, color: Colors.black12),
+                      // --- Pricing Section ---
+
+                      if (itemPrice > 0)
+                      _row(
+                        Icons.shopping_bag,
+                        "Item Price",
+                        "RM ${itemPrice.toStringAsFixed(2)}",
+                      )
+                      else
+                      _row(
+                        Icons.shopping_bag_outlined,
+                        "Item Price",
+                        "Waiting for update",
+                        valueColor: Colors.orange,
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      _row(
+                        Icons.attach_money,
+                        "Your Profit",
+                        "RM ${runnerProfit.toStringAsFixed(2)}",
+                      ),
+
+                      if (isUrgent)
+                        const SizedBox(height: 10),
+
+                      if (isUrgent)
+                        _row(
+                          Icons.bolt,
+                          "Urgent Included",
+                          "YES",
+                        ),
+
+                      const Divider(height: 30, color: Colors.black12),
+
+                      _row(
+                        Icons.payments,
+                        "Total To Collect (Temporary)",
+                        "RM ${totalToCollect.toStringAsFixed(2)}",
+                      ),
+                      const SizedBox(height: 25),
+                      _noteBox(totalToCollect, itemPrice),
                       const SizedBox(height: 20),
-                      // 购物清单卡片
-                      _buildSectionCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildField(
-                              'Store :',
-                              _safeGet(_orderData['shop_name']),
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              "To Buy list :",
-                              style: TextStyle(
-                                color: Colors.black54,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildListView(
-                              _formatShoppingList(_orderData['shopping_list']),
-                            ),
-                            const SizedBox(height: 15),
-                            _buildField(
-                              'Fee :',
-                              "RM ${(_orderData['delivery_fee'] ?? 0.0) is num ? (_orderData['delivery_fee'] as num).toStringAsFixed(2) : '0.00'}",
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                      _buildButton(),
+                      _checkboxArea(),
                     ],
                   ),
                 ),
-                if (_isSubmitting)
-                  Container(
-                    color: Colors.black12,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
+                const SizedBox(height: 40),
+                _btn(),
+                const SizedBox(height: 40), // Bottom padding for clean look
               ],
             ),
-    );
-  }
-
-  // --- UI 构建组件 (保持原样) ---
-  Widget _buildSectionCard({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10),
-        ],
+          ),
+        ),
       ),
-      child: child,
     );
   }
 
-  Widget _buildField(String label, String value) {
+  // --- UI 组件保持不变 ---
+   Widget _noteBox(double collectAmount, double itemPrice) {
+  return Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.red.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(
+        color: Colors.redAccent.withValues(alpha: 0.15),
+      ),
+    ),
+    child: Text(
+      itemPrice > 0
+          ? "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery."
+          : "Notice: Grocery item price has not been updated yet. The total amount will increase after purchase.",
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.redAccent,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+  );
+}
+
+  Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: const TextStyle(color: Colors.black54, fontSize: 13),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                value,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-            ),
-          ),
+          Icon(icon, color: const Color(0xFF6C8EF5), size: 20),
+          const SizedBox(width: 10),
+          Text(label, style: const TextStyle(color: Colors.black54)),
+          const Spacer(),
+          Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: valueColor ?? Colors.black87)),
         ],
       ),
     );
   }
 
-  Widget _buildListView(String text) {
+  Widget _checkboxArea() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFF8F9FB),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(text, style: const TextStyle(height: 1.5)),
+      child: CheckboxListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        title: const Text(
+          "I have read the details",
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+        value: isDetailsConfirmed,
+        activeColor: const Color(0xFF4A90E2),
+        onChanged: (v) => setState(() => isDetailsConfirmed = v ?? false),
+        controlAffinity: ListTileControlAffinity.leading,
+      ),
     );
   }
 
-  Widget _buildButton() {
-    return Container(
-      width: double.infinity,
-      height: 55,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0D47A1), Color(0xFF42A5F5)],
-        ),
-        borderRadius: BorderRadius.circular(30),
+  Widget _btn() {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isDetailsConfirmed
+            ? const Color(0xFF4A90E2)
+            : Colors.grey.shade300,
+        minimumSize: const Size(double.infinity, 65),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _handleTakeOrder,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        child: const Text(
-          "Take Order",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+      onPressed: isDetailsConfirmed ? _takeOrder : null,
+      child: const Text(
+        "Take Order",
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

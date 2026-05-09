@@ -222,7 +222,7 @@ class RegisterState extends State<Register> {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 5,
-                        shadowColor: Colors.blue.withOpacity(0.3),
+                        shadowColor: Colors.blue.withValues(alpha:0.3),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(25),
                         ),

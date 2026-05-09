@@ -1,8 +1,10 @@
+//14
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'chat_page.dart'; 
+import 'runner_proof_photo_page.dart';
 
-//14
 class ActiveParcelTaskPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
@@ -19,15 +21,49 @@ class ActiveParcelTaskPage extends StatefulWidget {
 class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
   int currentStatus = 1;
   bool isLoading = false;
+  Map<String, dynamic>? liveOrder; // 存储实时数据
+  bool isPageLoading = true;
 
   @override
   void initState() {
     super.initState();
     currentStatus = int.tryParse(widget.order['status_code'].toString()) ?? 1;
     if (currentStatus == 0) currentStatus = 1;
+    _refreshData();
   }
 
-  Future<void> _updateStatus(int s) async {
+  Future<void> _refreshData() async {
+  try {
+    final res = await http.get(
+      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),
+    );
+    if (res.statusCode == 200) {
+      setState(() {
+        liveOrder = jsonDecode(res.body);
+        currentStatus = liveOrder!['status_code'];
+        isPageLoading = false;
+      });
+    }
+  } catch (e) {
+    setState(() => isPageLoading = false);
+  }
+}
+
+  Future<void> _updateStatus(int nextS) async {
+
+    if (nextS == 4) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RunnerProofPhotoPage( // 你需要创建这个页面
+          orderId: widget.order['order_id'].toString(),
+          runnerId: widget.runnerId,
+        ),
+      ),
+    );
+    return;
+  }
+
     setState(() => isLoading = true);
     final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
     try {
@@ -36,47 +72,21 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.order['order_id'],
-          "next_status": s,
+          "status_code": nextS,
           "runner_id": widget.runnerId,
         }),
       );
       if (res.statusCode == 200) {
         setState(() {
-          currentStatus = s;
+          currentStatus = nextS;
           isLoading = false;
         });
-        if (s == 4) _finish();
       }
     } catch (e) {
       setState(() => isLoading = false);
     }
   }
 
-  void _finish() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Task Completed!"),
-        content: const Text(
-          "Great job. The money will be added to your account.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text(
-              "OK",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +98,18 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
           "Parcel Progress",
           style: TextStyle(color: Colors.black87),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ChatPage(
+                studentID: widget.order['requester_id'], // 拿到下单人 ID
+                runnerID: widget.runnerId,
+              )),
+            ),
+          ),
+        ],
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
@@ -159,24 +181,52 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
     ),
     child: Column(
       children: [
-        _rowSummary("Customer", widget.order['customer_name'] ?? "ABC"),
+        _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
-        _rowSummary("Dorm", widget.order['dropoff_point'] ?? "D1 Dorm"),
+        _rowSummary("Dorm", liveOrder?['dropoff_point'] ?? "N/A"),
         const SizedBox(height: 8),
-        _rowSummary("Collect", "RM ${widget.order['total_price'] ?? '5.0'}"),
+        _rowSummary( 
+          "Collect",
+          "RM ${double.tryParse(
+              liveOrder?['total_to_collect'].toString() ?? '0'
+            )?.toStringAsFixed(2) ?? '0.00'}",
+            valueColor: Colors.green,
+        ), 
+        _rowSummary(
+          "Profit",
+          "RM ${double.tryParse(
+              liveOrder?['runner_profit'].toString() ?? '0'
+            )?.toStringAsFixed(2) ?? '0.00'}",
+            valueColor: Colors.blue,
+        ),
       ],
     ),
   );
-  Widget _rowSummary(String l, String v) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(l, style: const TextStyle(color: Colors.grey, fontSize: 15)),
-      Text(
-        v,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-      ),
-    ],
-  );
+  Widget _rowSummary(
+  String l,
+  String v, {
+  Color valueColor = Colors.black,
+}) =>
+    Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          l,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 15,
+          ),
+        ),
+        Text(
+          v,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
   Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(

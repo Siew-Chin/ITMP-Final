@@ -2,281 +2,261 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:async'; // 导入 Timer 用于自动刷新
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Grocery Confirm UI',
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF0F8FF),
-        fontFamily: 'Roboto',
-        useMaterial3: true,
-      ),
-      home: const UserGroceryConfirm(
-        orderId: "TEMP_ID_123",
-      ), // 实际运行时请传入真实的 orderId
-    );
-  }
-}
+import 'dart:async';
+import 'chat_page.dart';
+import 'user_proof_photo_page.dart'; // 导入 Timer 用于自动刷新
 
 class UserGroceryConfirm extends StatefulWidget {
-  final String? orderId; // 接收从下单页面传过来的 ID
-  const UserGroceryConfirm({super.key, this.orderId});
+  final String orderId;
+  final String studentID;
+
+  const UserGroceryConfirm({
+    super.key, 
+    required this.orderId, 
+    required this.studentID,
+  });
 
   @override
   State<UserGroceryConfirm> createState() => _UserGroceryConfirmState();
 }
 
 class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
-  int currentStatus = 0;
+  // 状态码 (1: Order Taken, 2: Grocery Ordered, 3: Grocery Delivering, 4: Order Dropped)
+  int _currentStatus = 0; 
+  String? _runnerId;
+  double? _totalToCollect; 
+  String? _proofImageUrl; 
   Timer? _timer;
-  bool _isSyncing = false;
 
   @override
   void initState() {
     super.initState();
-    // 1. 页面打开时立刻查一次
-    _fetchOrderStatus();
-    // 2. 开启定时器，每 5 秒自动检查一次状态更新进度条
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      _fetchOrderStatus();
-    });
+    _fetchOrderStatus();// 初始化查询
+    // 设置每 3 秒轮询一次 API 4
+    _timer = Timer.periodic(
+      const Duration(seconds: 3), 
+      (t) => _fetchOrderStatus()
+      );
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); // 销毁页面时必须停止定时器，防止内存泄漏
+    _timer?.cancel(); // 销毁页面时停止轮询
     super.dispose();
   }
 
-  // --- 对接后端：获取订单实时进度 ---
+  // --- API 调用：获取实时进度 ---
   Future<void> _fetchOrderStatus() async {
-    if (_isSyncing) return;
-
-    // 注意：此处 URL 对应你朋友文档编号 4：获取实时进度
-    // 如果是模拟器用 10.0.2.2
-    final String url =
-        'http://10.0.2.2:5000/api/order/tracking?order_id=${widget.orderId}';
-
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');
     try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          // 假设后端返回 {"status_code": 2, ...}
-          currentStatus = data['status_code'] ?? 0;
-        });
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _currentStatus = data['status_code'] ?? 0;
+            _runnerId = data['runner_id'];
+            _totalToCollect = (data['total_to_collect'] as num?)?.toDouble();
+            _proofImageUrl = data['proof_photo'];
+          });
+        }
       }
     } catch (e) {
-      print("Sync Error: $e");
+      debugPrint("Grocery Polling error: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F8FF),
+      backgroundColor: Colors.blue[50],
       appBar: AppBar(
+        title: const Text('Grocery Delivering', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: const BackButton(color: Colors.black),
-        title: const Text(
-          'Item Delivering',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.black),
+        actions: [
+          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
+          if (_currentStatus > 0 && _runnerId != null) 
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+              onPressed: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => ChatPage(
+                      studentID: widget.studentID,
+                      runnerID: _runnerId!, 
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
-      // 使用 RefreshIndicator 实现你手绘的“下拉刷新”
       body: RefreshIndicator(
         onRefresh: _fetchOrderStatus,
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(), // 确保内容不满也能下拉
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 20),
-              // 进度条卡片
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _buildProgressLine(),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "swipe down to refresh",
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  "Order ID: ${widget.orderId}",
+                  style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 40),
 
-              // Chat 按钮
-              _buildActionButton(
-                text: "Chat",
-                color: Colors.white,
-                textColor: Colors.blue,
-                onPressed: () {
-                  // TODO: 跳转到 Chat 页面
-                },
-                isBordered: true,
-              ),
-              const SizedBox(height: 20),
+              // 进度条
+              _buildOrderTimeline(),
 
-              // Received 按钮 (仅在状态为 4 时亮起)
-              _buildActionButton(
-                text: "Received",
-                color: currentStatus >= 4
-                    ? const Color(0xFF1A237E)
-                    : Colors.grey.shade400,
-                textColor: Colors.white,
-                onPressed: currentStatus >= 4
-                    ? () {
-                        // TODO: 调用后端 API 确认收货并结束订单
-                        print("Order Completed!");
-                      }
-                    : null,
-                isBordered: false,
-              ),
+              const SizedBox(height: 50),
+
+              // 价格卡片
+              _buildPriceCard(),
+
               const SizedBox(height: 40),
-
-              // 底部提醒
-              Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE0F2F1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Color(0xFF00796B)),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Reminder: Your amount to pay is RM : ......',
-                        style: TextStyle(
-                          color: Color(0xFF00796B),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _buildPriceReminder(),
             ],
           ),
         ),
       ),
+      bottomNavigationBar: _buildBottomButton(),
     );
   }
 
-  // --- 以下 UI 构建代码保持逻辑一致，但通过 currentStatus 驱动渲染 ---
-
-  Widget _buildProgressLine() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildStep(1, "Order\nTaken"),
-        _buildLine(1),
-        _buildStep(2, "Picking\nUp"),
-        _buildLine(2),
-        _buildStep(3, "Item\nPicked"),
-        _buildLine(3),
-        _buildStep(4, "Item\nDropped"),
-      ],
-    );
-  }
-
-  Widget _buildStep(int stepIndex, String label) {
-    bool isActive = currentStatus >= stepIndex;
-    return Column(
-      children: [
-        Container(
-          width: 15,
-          height: 15,
-          decoration: BoxDecoration(
-            color: isActive ? Colors.black : Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isActive ? Colors.black : Colors.grey.shade400,
+  Widget _buildPriceCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha:0.1), blurRadius: 10, spreadRadius: 2)],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "Total To Pay", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)
             ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 10,
-            color: isActive ? Colors.black : Colors.grey,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLine(int lineIndex) {
-    bool isActive = currentStatus > lineIndex;
-    return Expanded(
-      child: Container(
-        height: 2,
-        color: isActive ? Colors.black : Colors.grey.shade300,
-        margin: const EdgeInsets.only(bottom: 25),
+          Text(
+            "RM ${(_totalToCollect ?? 0).toStringAsFixed(2)}",
+          )
+        ],
       ),
     );
   }
 
-  Widget _buildActionButton({
-    required String text,
-    required Color color,
-    required Color textColor,
-    required VoidCallback? onPressed,
-    required bool isBordered,
-  }) {
+  Widget _buildBottomButton() {
+    // 只有状态为 4 且后端上传了照片才能点击 Continue
+    bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: ElevatedButton(
+          onPressed: canContinue ? () {
+              _timer?.cancel();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProofPhotoPage(
+                    studentID: widget.studentID,
+                    orderId: widget.orderId,
+                    imageUrl: _proofImageUrl!,
+                  ),
+                ),
+              );
+            } : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1E3A8A),
+            disabledBackgroundColor: Colors.grey[300],
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          ),
+          child: Text(
+            _currentStatus == 4 ? "Receive & View Proof" : "Grocery is on the way...",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceReminder() {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0F2F1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, color: Color(0xFF00796B)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              // 如果 _totalToCollect 还没出，就显示等待中
+              _totalToCollect != null
+                ? 'Reminder: Total amount to pay is RM : ${_totalToCollect!.toStringAsFixed(2)}'
+                : 'Reminder: Waiting for Runner to confirm item price...',
+              style: const TextStyle(color: Color(0xFF00796B), fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- 进度条构建组件 ---
+  Widget _buildOrderTimeline() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildStepDot(1), _buildStepLine(1), _buildStepDot(2), _buildStepLine(2), _buildStepDot(3), _buildStepLine(3), _buildStepDot(4),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildStepLabel("Order\nTaken", 1),
+            _buildStepLabel("Picking\nUp", 2),
+            _buildStepLabel("Grocery\nPicked", 3),
+            _buildStepLabel("Order\nDropped", 4),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepDot(int step) {
+    bool active = _currentStatus >= step;
+    return Container(
+      width: 22, height: 22,
+      decoration: BoxDecoration(color: active ? Colors.black87 : Colors.grey[300], shape: BoxShape.circle),
+      child: active ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+    );
+  }
+
+  Widget _buildStepLine(int step) {
+    bool active = _currentStatus > step;
+    return Expanded(child: Container(height: 3, color: active ? Colors.black87 : Colors.grey[300]));
+  }
+
+  Widget _buildStepLabel(String text, int step) {
+    bool active = _currentStatus >= step;
     return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-            side: isBordered
-                ? const BorderSide(color: Colors.blue)
-                : BorderSide.none,
-          ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      width: 70,
+      child: Text(text, textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.normal, color: active ? Colors.black87 : Colors.grey),
       ),
     );
   }

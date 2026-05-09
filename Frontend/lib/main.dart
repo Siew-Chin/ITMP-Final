@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'main_screen.dart';
-import 'runner_payment_confirm_page.dart';
+import 'login_page.dart'; 
 
 void main() {
   runApp(const MyApp());
@@ -15,7 +14,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue),
       // The app now starts with the Navigation Bar logic
-      home: const MainScreen(studentId: "FIT2508099"),
+      home: const Login(),
     );
   }
 }
