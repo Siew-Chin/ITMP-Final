@@ -4,14 +4,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'chat_page.dart'; 
 import 'runner_payment_confirm_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ActiveDriveTaskPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
   const ActiveDriveTaskPage({
     Key? key,
     required this.order,
     required this.runnerId,
+    required this.client,
   }) : super(key: key);
 
   @override
@@ -63,8 +66,10 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
             amount: double.tryParse(widget.order['delivery_fee'].toString()) ?? 0.0,
             // 3. 提取客户相关信息
             customerName: widget.order['customer_name'] ?? "User",
-            customerStudentID: widget.order['requester_id']?.toString() ?? "N/A",
+            // 修改第 84 行左右
+            customerStudentID: liveOrder?['requester_id']?.toString() ?? widget.order['requester_id']?.toString() ?? "N/A",
             customerContact: widget.order['requester_contact']?.toString() ?? "N/A",
+            client: widget.client,
           ),
       ),
     );
@@ -107,15 +112,31 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           style: TextStyle(color: Colors.black87),
         ),
         actions: [
+          // 修改 AppBar 里的聊天按钮
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatPage(
-                studentID: widget.order['requester_id'], // 拿到下单人 ID
-                runnerID: widget.runnerId,
-              )),
-            ),
+            onPressed: () {
+              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
+              final String targetId = liveOrder?['requester_id']?.toString() ?? 
+                                      widget.order['requester_id']?.toString() ?? 
+                                      '';
+
+              if (targetId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Error: Requester ID not found")),
+                );
+                return;
+              }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatPage(
+                  client: widget.client,
+                  currentUserId: widget.runnerId,
+                  otherUserId: targetId,
+                )),
+              );
+            },
           ),
         ],
         backgroundColor: Colors.transparent,

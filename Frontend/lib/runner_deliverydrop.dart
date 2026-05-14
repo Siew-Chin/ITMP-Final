@@ -4,14 +4,17 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'chat_page.dart'; 
 import 'runner_proof_photo_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class RunnerDeliveryDrop extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
   const RunnerDeliveryDrop({
     Key? key,
     required this.order,
     required this.runnerId,
+    required this.client,
   }) : super(key: key);
 
   @override
@@ -64,6 +67,7 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
           builder: (context) => RunnerProofPhotoPage(
             orderId: widget.order['order_id'].toString(),
             runnerId: widget.runnerId,
+            client: widget.client,
           ),
         ),
       );
@@ -114,13 +118,28 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatPage(
-                studentID: widget.order['requester_id']?.toString() ?? "", 
-                runnerID: widget.runnerId,
-              )),
-            ),
+            onPressed: () {
+              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
+              final String targetId = liveOrder?['requester_id']?.toString() ?? 
+                                      widget.order['requester_id']?.toString() ?? 
+                                      '';
+
+              if (targetId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Error: Requester ID not found")),
+                );
+                return;
+              }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatPage(
+                  client: widget.client,
+                  currentUserId: widget.runnerId,
+                  otherUserId: targetId,
+                )),
+              );
+            },
           ),
         ],
         backgroundColor: Colors.transparent,

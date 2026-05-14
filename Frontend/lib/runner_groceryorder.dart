@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'runner_grocerydrop.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class RunnerGroceryOrder extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
     const RunnerGroceryOrder({
     Key? key, 
     required this.order, 
-    required this.runnerId})
+    required this.runnerId,
+    required this.client})
       : super(key: key);
 
   @override
@@ -82,6 +85,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
           context,
           MaterialPageRoute(
             builder: (context) => RunnerGroceryDrop(
+              client: widget.client,
               order: detailedOrder ?? widget.order,
               runnerId: widget.runnerId,
             ),

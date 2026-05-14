@@ -4,10 +4,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'waiting_page.dart';
 import 'food_tracking_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
+
 
 class FoodDeliveringPage extends StatefulWidget {
   final String studentID;
-  const FoodDeliveringPage({super.key, required this.studentID});
+  final StreamChatClient client;
+  const FoodDeliveringPage({
+    super.key,
+    required this.studentID,
+    required this.client
+  });
   
 
   @override
@@ -157,10 +164,12 @@ double get _totalToCollect {
                 orderId: serverOrderId,
                 studentID: widget.studentID,
                 totalPrice: _totalToCollect,
+                client: widget.client,
                 targetPage: FoodTrackingPage(
+                  client: widget.client,
                   orderId: serverOrderId,
                   studentID: widget.studentID,
-                  totalPrice: _totalToCollect,
+                  totalPrice: _totalToCollect
                 ),
               ),
             ),

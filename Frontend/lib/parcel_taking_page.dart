@@ -4,11 +4,14 @@ import 'dart:convert';
 import 'waiting_page.dart';
 import 'parcel_tracking_page.dart'; 
 import 'package:http/http.dart' as http;
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ParcelTakingPage extends StatefulWidget {
   final String studentID;
+  final StreamChatClient client;
   const ParcelTakingPage({
-    super.key,required this.studentID
+    super.key,required this.studentID, 
+    required this.client
     });
 
   @override
@@ -282,7 +285,9 @@ Align(
               orderId: serverOrderId,
               studentID: widget.studentID,
               totalPrice: _totalPrice,
+              client: widget.client,
               targetPage: ParcelTrackingPage(
+                client: widget.client,
                 orderId: serverOrderId,
                 studentID: widget.studentID,
                 totalPrice: _totalPrice,

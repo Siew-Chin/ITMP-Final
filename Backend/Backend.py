@@ -21,8 +21,8 @@ CORS(app)
 
 # Database Connection
 ca = certifi.where()
-client = MongoClient("mongodb+srv://admin:itmp123456@cluster0.bnw80ee.mongodb.net/?appName=Cluster0", tlsCAFile=ca)
-db = client.ITMP_Project
+mongo_client = MongoClient("mongodb+srv://admin:itmp123456@cluster0.bnw80ee.mongodb.net/?appName=Cluster0", tlsCAFile=ca)
+db = mongo_client.ITMP_Project
 users_col = db.user_detail 
 order_col = db.order  
 
@@ -39,10 +39,10 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 api_key = "659pk8bnxecv"
 api_secret = "774u3vyq8sxqddhgjhgywqpftb8pc5xnq83dqrrdbknyf7wsd8yj3kta55f9r2b4"
 
-client = StreamChat(api_key, api_secret)
+stream_client = StreamChat(api_key, api_secret)
 
 def generate_token(user_id):
-    return client.create_token(user_id)
+    return stream_client.create_token(user_id)
 
 #API 1: register
 @app.route('/register', methods=['POST'])
@@ -171,6 +171,7 @@ def get_order_tracking(order_id):
         return jsonify({
             "status_code": order.get('status_code', 0),
             "order_id": order.get('order_id'),
+            "requester_id": order.get('requester_id'),
             "runner_id": order.get('runner_id', None),
             "proof_photo": order.get('proof_photo'),
             "item_price": order.get('item_price', 0),
@@ -289,14 +290,35 @@ def upload_proof():
 def serve_proof(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-#API 6-2: Get Token for Chat
+# API 6-2: Get Stream Token
 @app.route('/get_token/<user_id>')
 def get_token(user_id):
+
     try:
-        token = client.create_token(user_id)
-        return jsonify({"token": token})
+
+        stream_client.upsert_user({
+            "id": str(user_id),
+            "name": f"User {user_id}",
+            "role": "admin"
+        })
+
+        token = stream_client.create_token(str(user_id))
+
+        print("TOKEN CREATED")
+        print(token)
+
+        return jsonify({
+            "token": token
+        })
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+        print("STREAM ERROR")
+        print(e)
+
+        return jsonify({
+            "error": str(e)
+        }), 500
 
 # API 7: Submit Feedback
 @app.route('/api/order/feedback', methods=['POST'])
@@ -682,6 +704,7 @@ def get_order_detail(order_id):
         # 4. 整合数据返回
         response_data = {
             "order_id": order.get("order_id"),
+            "requester_id": student_id,
             "status_code": order.get("status_code", 0),
             "type": order.get("type", "Parcel"),
             # 优先从 user 表拿最新的名字和电话，拿不到再从 order 表拿，最后给默认值

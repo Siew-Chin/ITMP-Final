@@ -4,12 +4,16 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'tracking_delivery_page.dart';
 import 'waiting_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ItemDeliveryPage extends StatefulWidget {
   final String studentID;
+  final StreamChatClient client;
   const ItemDeliveryPage({
-    super.key,required this.studentID
-    });
+    super.key,
+    required this.studentID,
+    required this.client
+  });
 
   @override
   State<ItemDeliveryPage> createState() => _ItemDeliveryPageState();
@@ -118,7 +122,9 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
                 orderId: serverOrderId,
                 studentID: widget.studentID,
                 totalPrice: _totalToCollect,
+                client: widget.client,
                 targetPage: TrackingDeliveryPage(
+                  client: widget.client,
                   orderId: serverOrderId,
                   studentID: widget.studentID,
                   totalPrice: _totalToCollect,

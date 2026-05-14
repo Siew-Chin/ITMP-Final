@@ -9,11 +9,13 @@ import 'parcel_detail_page.dart';
 import 'food_detail_page.dart';
 import 'runner_groceryorder.dart';
 import 'runner_deliverytake.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 //12
 class RunnerMainMenu extends StatefulWidget {
   final String runnerId;
-  const RunnerMainMenu({Key? key, required this.runnerId}) : super(key: key);
+  final StreamChatClient client;
+  const RunnerMainMenu({Key? key, required this.runnerId, required this.client}) : super(key: key);
 
   @override
   _RunnerMainMenuState createState() => _RunnerMainMenuState();
@@ -282,19 +284,19 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
         String type = (task['type'] ?? 'item').toString().toLowerCase();
 
         if (type == 'drive' || type == 'ride') {
-          destination = DriveDetailPage(order: task, runnerId: widget.runnerId);
+          destination = DriveDetailPage(order: task, runnerId: widget.runnerId, client: widget.client);
 
         } else if (type == 'food') {
-          destination = FoodDetailPage(order: task, runnerId: widget.runnerId);
+          destination = FoodDetailPage(order: task, runnerId: widget.runnerId, client: widget.client  );
 
         } else if (type == 'grocery') {
-          destination = RunnerGroceryOrder(order: task, runnerId: widget.runnerId);
+          destination = RunnerGroceryOrder(order: task, runnerId: widget.runnerId, client: widget.client);
 
         } else if (type == 'item') {
-          destination = RunnerDeliveryTake(order: task, runnerId: widget.runnerId);
+          destination = RunnerDeliveryTake(order: task, runnerId: widget.runnerId, client: widget.client);
 
         } else {
-          destination = ParcelDetailPage(order: task, runnerId: widget.runnerId);
+          destination = ParcelDetailPage(order: task, runnerId: widget.runnerId, client: widget.client);
         }
 
         Navigator.push(

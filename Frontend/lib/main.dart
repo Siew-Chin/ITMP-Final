@@ -1,20 +1,41 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
+import 'login_page.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final client = StreamChatClient(
+    '659pk8bnxecv',
+  logLevel: Level.INFO,
+  connectTimeout: const Duration(seconds: 30), // ✅ 从默认的 6 秒改到 30 秒
+  receiveTimeout: const Duration(seconds: 30),
+ );
+
+  print("✅ DEBUG: Client created, launching App...");
+
+  runApp(MyApp(client: client));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final StreamChatClient client;
+
+  const MyApp({
+    super.key,
+    required this.client,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
-      // The app now starts with the Navigation Bar logic
-      home: const Login(),
+      builder: (context, child) {
+        return StreamChat(
+          client: client,
+          child: child!,
+        );
+      },
+
+      home: Login(client: client),
     );
   }
 }

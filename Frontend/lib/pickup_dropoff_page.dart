@@ -4,11 +4,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'waiting_page.dart';
 import 'pickup_dropoff_tracking_page.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart'; 
 
 class FoodDeliveringPage extends StatefulWidget {
   final String studentID;
+  final StreamChatClient client;
   const FoodDeliveringPage({
     super.key, required this.studentID
+    , required this.client
     });
   
 
@@ -107,7 +110,9 @@ double get _totalToCollect {
                 orderId: serverOrderId,
                 studentID: widget.studentID,
                 totalPrice: _totalToCollect,
+                client: widget.client,
                 targetPage: PickupDropoffTrackingPage(
+                  client: widget.client,
                   orderId: serverOrderId,
                   studentID: widget.studentID,
                   totalPrice: _totalToCollect,

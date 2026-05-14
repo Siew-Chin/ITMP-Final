@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'service_page.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 final baseUrl = kIsWeb
     ? 'http://127.0.0.1:5000'   // Chrome
@@ -12,7 +13,9 @@ final baseUrl = kIsWeb
 
 // Login Page
 class Login extends StatefulWidget {
-  const Login({super.key});
+  final StreamChatClient client;
+  const Login({super.key, required this.client});
+  
 
   @override
   State<Login> createState() => LoginState();
@@ -47,7 +50,7 @@ class LoginState extends State<Login> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ServicePage(studentID: sID),
+            builder: (context) => ServicePage(studentID: sID, client: widget.client),
           ),
         );
       } else {
@@ -167,7 +170,7 @@ class LoginState extends State<Login> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const Register(),
+                            builder: (context) => Register(client: widget.client),
                           ),
                         );
                       },

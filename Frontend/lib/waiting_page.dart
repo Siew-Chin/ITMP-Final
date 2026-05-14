@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'service_page.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class WaitingPage extends StatefulWidget {
   final String orderId;
   final String studentID;
   final double totalPrice;
   final Widget targetPage; // 这个就是你在截图里定义的“第三列”页面
+  final StreamChatClient client;
 
   const WaitingPage({
     super.key,
@@ -16,6 +18,7 @@ class WaitingPage extends StatefulWidget {
     required this.studentID,
     required this.targetPage,
     required this.totalPrice,
+    required this.client,
   });
 
   @override
@@ -117,7 +120,10 @@ class _WaitingPageState extends State<WaitingPage> {
               onPressed: () {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => ServicePage(studentID: widget.studentID)),
+                  MaterialPageRoute(builder: (context) => ServicePage(
+                    studentID: widget.studentID,
+                    client: widget.client,
+                  )),
                   (route) => false,
                 );
               },

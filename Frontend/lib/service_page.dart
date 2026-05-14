@@ -8,6 +8,7 @@ import 'pickup_dropoff_page.dart';
 import 'user_GroceryPurchasing.dart'; 
 import 'item_delivery_page.dart';
 import 'runner_main_menu.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 final baseUrl = kIsWeb
     ? 'http://127.0.0.1:5000'   // Chrome
@@ -16,7 +17,8 @@ final baseUrl = kIsWeb
 //Service Page (after login/register)
 class ServicePage extends StatefulWidget {
   final String studentID;
-  const ServicePage({super.key, required this.studentID});
+  final StreamChatClient client;
+  const ServicePage({super.key, required this.studentID, required this.client});
 
   @override
   State<ServicePage> createState() => _ServicePageState();
@@ -31,11 +33,11 @@ class _ServicePageState extends State<ServicePage> {
       case 0:
         return _buildHomeContent(); // 首页的服务格子
       case 1:
-        return OrderHistoryPage(studentID: widget.studentID);
+        return OrderHistoryPage(studentID: widget.studentID, client: widget.client);
       case 2:
-        return RunnerMainMenu(runnerId: widget.studentID);
+        return RunnerMainMenu(runnerId: widget.studentID, client: widget.client);
       case 3:
-        return ProfilePage(studentID: widget.studentID);
+        return ProfilePage(studentID: widget.studentID, client: widget.client);
       default:
         return _buildHomeContent();
     }
@@ -106,27 +108,27 @@ class _ServicePageState extends State<ServicePage> {
               _serviceCard(
                 title: "Parcel Delivery",
                 imagePath: "assets/parcel_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ParcelTakingPage(studentID: widget.studentID))),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ParcelTakingPage(studentID: widget.studentID, client: widget.client))),
               ),
               _serviceCard(
                 title: "Food Delivery",
                 imagePath: "assets/fooddelivery_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => food.FoodDeliveringPage(studentID: widget.studentID))),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => food.FoodDeliveringPage(studentID: widget.studentID, client: widget.client))),
               ),
               _serviceCard(
                 title: "Pick-up&Drop-off",
                 imagePath: "assets/pickupndropoff_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FoodDeliveringPage(studentID: widget.studentID))),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FoodDeliveringPage(studentID: widget.studentID, client: widget.client))),
               ),
               _serviceCard(
                 title: "Grocery",
                 imagePath: "assets/grocery_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => GroceryPurchasingScreen(studentID: widget.studentID))),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => GroceryPurchasingScreen(studentID: widget.studentID, client: widget.client))),
               ),
               _serviceCard(
                 title: "Item Delivery",
                 imagePath: "assets/grocery_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ItemDeliveryPage(studentID: widget.studentID))),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ItemDeliveryPage(studentID: widget.studentID, client: widget.client))),
               ),
             ],
           ),
@@ -236,17 +238,23 @@ class _ServicePageState extends State<ServicePage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => OrderHistoryPage(studentID: widget.studentID),
+              builder: (context) => OrderHistoryPage(studentID: widget.studentID, client: widget.client),
             ),
           );
         } else if (index == 2) {
           // Navigate to Runner page
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RunnerMainMenu(runnerId: widget.studentID, client: widget.client),
+            ),
+          );
         } else if (index == 3) { 
           // Navigate to Profile page
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => ProfilePage(studentID: widget.studentID),
+              builder: (context) => ProfilePage(studentID: widget.studentID, client: widget.client),
             ),
           );
         }

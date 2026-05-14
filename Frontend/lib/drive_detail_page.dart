@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'active_drive_task_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class DriveDetailPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
+
   const DriveDetailPage({
     Key? key, 
     required this.order, 
-    required this.runnerId})
+    required this.runnerId, 
+    required this.client,
+    })
       : super(key: key);
 
   @override
@@ -87,6 +92,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
           context,
           MaterialPageRoute(
             builder: (context) => ActiveDriveTaskPage(
+              client: widget.client,
               order: detailedOrder ?? widget.order,
               runnerId: widget.runnerId,
             ),

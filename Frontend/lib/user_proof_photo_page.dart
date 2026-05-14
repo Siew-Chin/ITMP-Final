@@ -1,17 +1,20 @@
 //23
 import 'package:flutter/material.dart';
 import 'user_rating_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class UserProofPhotoPage extends StatelessWidget {
   final String studentID;
   final String orderId;
   final String imageUrl;
+  final StreamChatClient client;
 
   const UserProofPhotoPage({
     super.key, 
     required this.studentID, 
     required this.orderId,
-    required this.imageUrl
+    required this.imageUrl,
+    required this.client
   });
 
   @override
@@ -68,6 +71,7 @@ class UserProofPhotoPage extends StatelessWidget {
                   context, 
                   MaterialPageRoute(
                     builder: (context) => UserRatingPage(
+                      client: client,
                       studentID: studentID,
                       orderId: orderId,
                     )

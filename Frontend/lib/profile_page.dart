@@ -5,10 +5,12 @@ import 'service_page.dart';
 import 'edit_profile_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ProfilePage extends StatefulWidget {
   final String studentID;
-  const ProfilePage({super.key, required this.studentID});
+  final StreamChatClient client;
+  const ProfilePage({super.key, required this.studentID, required this.client});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -155,7 +157,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             onPressed: () {
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(builder: (context) => ServicePage(studentID: widget.studentID)),
+                                MaterialPageRoute(builder: (context) => ServicePage(studentID: widget.studentID, client: widget.client)),
                               );
                             },
                           ),

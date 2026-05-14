@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'service_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class RunnerPaymentConfirmPage extends StatefulWidget {
   final String studentID;
@@ -10,7 +11,7 @@ class RunnerPaymentConfirmPage extends StatefulWidget {
   final String customerStudentID;
   final String customerContact;
   final String orderId;
-
+  final StreamChatClient client;
   const RunnerPaymentConfirmPage({
     super.key, 
     required this.studentID,
@@ -19,6 +20,7 @@ class RunnerPaymentConfirmPage extends StatefulWidget {
     required this.customerStudentID,
     required this.customerContact,
     required this.orderId,
+    required this.client,
 
     });
 
@@ -93,7 +95,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => ServicePage(studentID: widget.studentID),
+          builder: (context) => ServicePage(studentID: widget.studentID, client: widget.client,),
         ),
       );
     } else {

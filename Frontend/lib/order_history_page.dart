@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:my_new_app/service_page.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart'; 
 
 class OrderHistoryPage extends StatefulWidget {
   final String studentID;
-  const OrderHistoryPage({super.key, required this.studentID});
+  final StreamChatClient client;
+  const OrderHistoryPage({super.key, required this.studentID, required this.client});
 
   @override
   State<OrderHistoryPage> createState() => _OrderHistoryPageState();
@@ -282,7 +284,7 @@ Widget _buildOrderCard(dynamic order) {
                             onTap: () {
                               Navigator.pushReplacement(
                                 context,
-                                MaterialPageRoute(builder: (context) => ServicePage(studentID: widget.studentID)),
+                                MaterialPageRoute(builder: (context) => ServicePage(studentID: widget.studentID, client: widget.client)),
                               );
                             },
                             child: const Icon(

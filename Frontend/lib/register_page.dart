@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'service_page.dart';
 import 'package:flutter/foundation.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 final baseUrl = kIsWeb
     ? 'http://127.0.0.1:5000' // Chrome
@@ -10,7 +11,8 @@ final baseUrl = kIsWeb
 
 // Register page
 class Register extends StatefulWidget {
-  const Register({super.key});
+  final StreamChatClient client;
+  const Register({super.key, required this.client});
 
   @override
   State<Register> createState() => RegisterState();
@@ -66,7 +68,7 @@ class RegisterState extends State<Register> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ServicePage(studentID: studentID),
+            builder: (context) => ServicePage(studentID: studentID, client: widget.client),
           ),
         );
       } else {

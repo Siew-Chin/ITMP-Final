@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'active_food_task_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class FoodDetailPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
   const FoodDetailPage({
     Key? key, 
     required this.order, 
-    required this.runnerId})
+    required this.runnerId,
+    required this.client
+  })
       : super(key: key);
 
   @override
@@ -87,6 +91,7 @@ class _FoodDetailPageState extends State<FoodDetailPage> {
           context,
           MaterialPageRoute(
             builder: (context) => ActiveFoodTaskPage(
+              client: widget.client,
               order: detailedOrder ?? widget.order,
               runnerId: widget.runnerId,
             ),

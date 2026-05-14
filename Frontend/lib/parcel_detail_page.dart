@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'active_parcel_task_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ParcelDetailPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
   const ParcelDetailPage({
     Key? key,
     required this.order,
     required this.runnerId,
+    required this.client,
   }) : super(key: key);
 
   @override
@@ -75,6 +78,7 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
           context,
           MaterialPageRoute(
             builder: (context) => ActiveParcelTaskPage(
+              client: widget.client,
               order: detailedOrder ?? widget.order,
               runnerId: widget.runnerId,
             ),
