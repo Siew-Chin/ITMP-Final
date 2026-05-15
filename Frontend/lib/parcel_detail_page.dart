@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'active_parcel_task_page.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
+
 class ParcelDetailPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
@@ -54,25 +55,29 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
     setState(() => isLoading = false);
   }
 }
+bool _isSubmitting = false;
 
   Future<void> _takeOrder() async {
-    // Line 23: Update the URL to API Route 5 from your documentation
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
+    if (_isSubmitting) return;
+
+    setState(() => _isSubmitting = true);
 
     try {
       final response = await http.post(
-        url,
+        Uri.parse('http://10.0.2.2:5000/api/order/update_status'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.order['order_id'],
           "status_code": 1,
           "runner_id": widget.runnerId,
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
 
-      debugPrint("Response Status: ${response.statusCode}");
-      debugPrint("Response Body: ${response.body}");
-      
+      debugPrint("Take order status: ${response.statusCode}");
+      debugPrint("Take order body: ${response.body}");
+
+      if (!mounted) return;
+
       if (response.statusCode == 200) {
         Navigator.pushReplacement(
           context,
@@ -84,13 +89,69 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
             ),
           ),
         );
+        return;
+      }
+
+      Map<String, dynamic> data = {};
+      try {
+        data = jsonDecode(response.body);
+      } catch (_) {
+        data = {"error": response.body};
+      }
+
+      final errorMessage = data['error']?.toString() ?? "Unable to take this order.";
+
+      if (data['current_status'] == -1 ||
+          errorMessage.toLowerCase().contains("cancel")) {
+        _showCancelDialog();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
       }
     } catch (e) {
-      debugPrint("Error: $e");
-    }
+      debugPrint("Take order error: $e");
 
-    print("Sending order_id: ${widget.order['order_id']}");
-    print("With runner_id: ${widget.runnerId}");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Take order failed: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+  // 弹出取消提示框
+  void _showCancelDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 强制用户点击按钮
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 10),
+            Text("Order Cancelled"),
+          ],
+        ),
+        content: const Text("Sorry, the user has already cancelled this order."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // close dialog
+              Navigator.pop(context); // back to runner page inside ServicePage
+            },
+            child: const Text(
+              "Back to Menu",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -176,12 +237,6 @@ bool isUrgent =
                       ),
                       const Divider(height: 30, color: Colors.black12),
                       _row(
-                        Icons.local_shipping,
-                        "Pickup",
-                        (detailedOrder?['pickup_point'] ?? widget.order['pickup_point'] ?? "Main Parcel Hub").toString(),
-                      ),
-                      const SizedBox(height: 10),
-                      _row(
                         Icons.home,
                         "Dropoff",
                         (detailedOrder?['dropoff_point'] ?? widget.order['dropoff_point'] ?? "D1 Dorm").toString(),
@@ -191,6 +246,12 @@ bool isUrgent =
                         Icons.person,
                         "Quantity",
                         (detailedOrder?['parcel_qty'] ?? widget.order['parcel_qty'] ?? 0).toString(),
+                      ),
+                      const SizedBox(height: 10),
+                      _row(
+                        Icons.description,
+                        "Details",
+                        (detailedOrder?['parcel_details'] ?? widget.order['parcel_details'] ?? "No details").toString(),
                       ),
                       const Divider(height: 30, color: Colors.black12),
                       // --- Pricing Section ---
@@ -316,10 +377,20 @@ bool isUrgent =
         minimumSize: const Size(double.infinity, 65),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
-      onPressed: isDetailsConfirmed ? _takeOrder : null,
-      child: const Text(
-        "Take Order",
-        style: TextStyle(
+      onPressed: (isDetailsConfirmed && !_isSubmitting)
+      ? () async {
+          await _fetchOrderDetails();
+
+          if (detailedOrder?['status_code'] == -1) {
+            _showCancelDialog();
+          } else {
+            _takeOrder();
+          }
+        }
+      : null,
+      child: Text(
+        _isSubmitting ? "Taking Order..." : "Take Order",
+        style: const TextStyle(
           color: Colors.white,
           fontSize: 18,
           fontWeight: FontWeight.bold,

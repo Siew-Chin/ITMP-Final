@@ -91,13 +91,21 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
         };
 
       if (currentStatus == 2 && nextS == 3) {
-        String receiptAmount = _amountController.text.trim();
+        String receiptAmountText = _amountController.text.trim();
+        double? receiptAmount = double.tryParse(receiptAmountText);
 
-        if (receiptAmount.isEmpty) {
-          throw Exception("Please enter receipt amount");
+        if (receiptAmountText.isEmpty || receiptAmount == null || receiptAmount <= 0) {
+          setState(() => isLoading = false); // 停止 loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Please enter a valid amount (greater than 0)"),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return; // 拦截，不继续执行请求
         }
 
-        bodyData["amount"] = receiptAmount;
+        bodyData["amount"] = receiptAmountText;
       }
 
       final response = await http.post(
@@ -237,9 +245,9 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F3A5A)),
                 ),
                 const SizedBox(height: 15),
-                _stepBtn("1. Arriving at the Grocery Shop", 1, 2, const Color(0xFF6C8EF5)),
+                _stepBtn("1. Arrived Grocery Shop", 1, 2, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 12),
-                _stepBtn("2. Grocery Picked Up", 2, 3, const Color(0xFF6C8EF5)),
+                _stepBtn("2. Grocery Purchased", 2, 3, const Color(0xFF6C8EF5)),
                 if (currentStatus == 2)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -289,12 +297,32 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
       children: [
         _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
-        _rowSummary("Dorm", liveOrder?['dropoff_point'] ?? "N/A"),
+        _rowSummary("Contact", liveOrder?['requester_contact'] ?? "N/A"),
         const SizedBox(height: 8),
-
-        _rowSummary("Shop", liveOrder?['shop_name'] ?? widget.order['shop_name'] ?? "N/A"),
+        _rowSummary("Pickup Point", liveOrder?['shop_name'] ??widget.order['shop_name'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Dropoff Point", liveOrder?['dropoff_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Grocery Details", liveOrder?['shopping_details'] ?? "N/A"),
         const Divider(height: 20),
-        
+        const Text(
+          "Shopping List:",
+          style: TextStyle(
+            color: Colors.black45,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          (liveOrder?['shopping_list'] ?? widget.order['shopping_list'] ?? "No details available"),
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF333333),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const Divider(height: 20),
         _rowSummary( 
           "Collect",
           "RM ${double.tryParse(

@@ -154,54 +154,57 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _summaryCard("Ride"),
-                const SizedBox(height: 25),
-                const Text(
-                  "Note:",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.redAccent,
+          child: SingleChildScrollView( // 1. 添加滚动视图
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _summaryCard("Ride"),
+                  const SizedBox(height: 25),
+                  const Text(
+                    "Note:",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.redAccent,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                _noteBox(
-                   "Please verify the passenger identity. Drive safely and follow traffic rules.\n\nCollect payment at the end of the ride.",
-                ),
-                const SizedBox(height: 35),
-                const Text(
-                  "Task Steps",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 15),
-                _stepBtn(
-                  "1. Passenger Picked Up",
-                  1,
-                  2,
-                  const Color(0xFF4A90E2),
-                ),
-                const SizedBox(height: 12),
-                _stepBtn(
-                  "2. Arrived at Destination",
-                  2,
-                  3,
-                  const Color(0xFF4A90E2),
-                ),
-                const SizedBox(height: 12),
-                _stepBtn("3. Finish Ride", 3, 4, const Color(0xFF4A90E2)),
-                const Spacer(),
-                _escapeBtn(),
-                if (isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 10),
-                    child: Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 10),
+                  _noteBox(
+                    "Please verify the passenger identity. Drive safely and follow traffic rules.\n\nCollect payment at the end of the ride.",
                   ),
-              ],
+                  const SizedBox(height: 35),
+                  const Text(
+                    "Task Steps",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15),
+                  _stepBtn(
+                    "1. Picking Up Passenger",
+                    1,
+                    2,
+                    const Color(0xFF4A90E2),
+                  ),
+                  const SizedBox(height: 12),
+                  _stepBtn(
+                    "2. Arrive at Pickup Point",
+                    2,
+                    3,
+                    const Color(0xFF4A90E2),
+                  ),
+                  const SizedBox(height: 12),
+                  _stepBtn("3. Finish Ride", 3, 4, const Color(0xFF4A90E2)),
+                  const SizedBox(height: 40),
+                  _escapeBtn(),
+                  if (isLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -222,9 +225,13 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
       children: [
         _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
+        _rowSummary("Contact", liveOrder?['requester_contact'] ?? "N/A"),
+        const SizedBox(height: 8),
         _rowSummary("Pickup Point", liveOrder?['pickup_point'] ?? "N/A"),
         const SizedBox(height: 8),
         _rowSummary("Dropoff Point", liveOrder?['dropoff_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Ride Details", liveOrder?['ride_details'] ?? "N/A"),
         const SizedBox(height: 8),
         _rowSummary( 
           "Collect",

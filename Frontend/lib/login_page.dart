@@ -28,8 +28,17 @@ class LoginState extends State<Login> {
 
   // 1. 技术实现 & 数据来源：异步联网登录
   Future<void> loginUser() async {
-    String sID = _controllerStudentID.text;
-    String pw = _controllerPassword.text;
+    String sID = _controllerStudentID.text.trim();
+    String pw = _controllerPassword.text.trim();
+
+    if (sID.isEmpty) {
+      _showSnackBar("Please enter Student ID");
+      return;
+    }
+    if (pw.isEmpty) {
+      _showSnackBar("Please enter Password");
+      return;
+    }
 
     // 后端 Flask 地址 (Android 模拟器使用 10.0.2.2)
     final url = Uri.parse('http://10.0.2.2:5000/login');
@@ -54,20 +63,23 @@ class LoginState extends State<Login> {
           ),
         );
       } else {
-        // 1. 错误处理：解析后端返回的错误信息
         final errorData = jsonDecode(response.body);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorData['message'] ?? "Login Failed")),
-        );
+        _showSnackBar(errorData['message'] ?? "Login Failed");
       }
     } catch (e) {
-      // 1. 错误处理：网络连接异常捕获
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Error: Cannot connect to Flask server")),
-      );
+      _showSnackBar("Error: Cannot connect to server");
     }
+  }
+
+  void _showSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent, 
+        behavior: SnackBarBehavior.floating, 
+      ),
+    );
   }
 
   // 输入框组件封装

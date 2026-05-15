@@ -77,6 +77,42 @@ class _WaitingPageState extends State<WaitingPage> {
     }
   }
 
+  Future<void> _cancelOrder() async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:5000/api/order/cancel'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "order_id": widget.orderId,
+          "requester_id": widget.studentID,
+        }),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        _timer?.cancel();
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ServicePage(
+              studentID: widget.studentID,
+              client: widget.client,
+            ),
+          ),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Unable to cancel this order.")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Cancel order error: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // UI 部分保持不变 ...
@@ -116,19 +152,39 @@ class _WaitingPageState extends State<WaitingPage> {
               ),
             ),
             const SizedBox(height: 50),
-            TextButton(
+            ElevatedButton.icon(
               onPressed: () {
+                _timer?.cancel();
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => ServicePage(
-                    studentID: widget.studentID,
-                    client: widget.client,
-                  )),
+                  MaterialPageRoute(
+                    builder: (context) => ServicePage(
+                      studentID: widget.studentID,
+                      client: widget.client,
+                    ),
+                  ),
                   (route) => false,
                 );
               },
-              child: const Text("Cancel and Go Back", style: TextStyle(color: Colors.redAccent)),
-            )
+              icon: const Icon(Icons.exit_to_app),
+              label: const Text("Exit and Continue Later"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C8EF5),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            TextButton(
+              onPressed: _cancelOrder,
+              child: const Text(
+                "Cancel Order",
+                style: TextStyle(color: Colors.redAccent),
+              ),
+            ),
           ],
         ),
       ),

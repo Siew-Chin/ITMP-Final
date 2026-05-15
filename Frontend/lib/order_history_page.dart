@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:my_new_app/service_page.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart'; 
@@ -59,7 +58,7 @@ Widget _buildOrderCard(dynamic order) {
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: Colors.white.withOpacity(0.9),
       borderRadius: BorderRadius.circular(15),
       boxShadow: [
         BoxShadow(
@@ -251,103 +250,51 @@ Widget _buildOrderCard(dynamic order) {
   }
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      //Background
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFEAF3FF),
-              Color(0xFFD6E8FF),
-              Color(0xFFBFD9FF),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: isLoading 
-            ? const Center(child: CircularProgressIndicator()) // 加载中显示转圈
-            : RefreshIndicator( // 添加下拉刷新功能
-                onRefresh: _fetchOrders,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+    // 这里不再返回 Scaffold 和 Container 背景，因为 ServicePage 已经提供了
+    return isLoading 
+      ? const Center(child: CircularProgressIndicator()) 
+      : RefreshIndicator(
+          onRefresh: _fetchOrders,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 120), // 底部留出空间给固定导航栏
+            child: Column(
+              children: [
+                // 页面标题和切换开关
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      const Text(
+                        "Orders",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2F3A5A),
+                        ),
+                      ),
                       Row(
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(builder: (context) => ServicePage(studentID: widget.studentID, client: widget.client)),
-                              );
-                            },
-                            child: const Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Color(0xFF6C8EF5),
-                              size: 28,
-                            ),
+                          Text(
+                            isSwitch ? "Runner Mode" : "User Mode",
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF2F3A5A), fontStyle: FontStyle.italic),
                           ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              "Orders",
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF2F3A5A),
-                              ),
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                  isSwitch ? "Runner Mode" : "User Mode",
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF2F3A5A),
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                              ),
-                              Switch(
-                                value: isSwitch,
-                                onChanged: (value) {
-                                  setState(() {
-                                    isSwitch = value;
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        value
-                                          ? "Switched to Runner Mode"
-                                          : "Switched to User Mode",
-                                      ),
-                                    ),
-                                  );
-                                },
-                                activeThumbColor: Colors.white,
-                                activeTrackColor: const Color(0xFF6C8EF5),
-                                inactiveThumbColor: Colors.white,
-                                inactiveTrackColor: Colors.grey,
-                              ),
-                            ],
+                          Switch(
+                            value: isSwitch,
+                            onChanged: (value) => setState(() => isSwitch = value),
+                            activeColor: const Color(0xFF6C8EF5),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      isSwitch ? _buildRunnerView() : _buildUserView(),
-                    ]
+                    ],
                   ),
                 ),
-              ),
-          
-        ),
-      ),
-    );
+                const SizedBox(height: 10),
+                isSwitch ? _buildRunnerView() : _buildUserView(),
+              ],
+            ),
+          ),
+        );
   }
 }

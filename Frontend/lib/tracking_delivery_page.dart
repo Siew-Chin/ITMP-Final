@@ -76,6 +76,17 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
+          TextButton.icon(
+            onPressed: () {
+              _timer?.cancel();
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.close, color: Colors.black),
+            label: const Text(
+              "Exit",
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          ),
           // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
           if (_currentStatus > 0 && _runnerId != null) 
             IconButton(

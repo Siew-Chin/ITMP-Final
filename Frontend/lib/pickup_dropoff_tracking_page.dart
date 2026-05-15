@@ -73,6 +73,17 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
+          TextButton.icon(
+            onPressed: () {
+              _timer?.cancel();
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.close, color: Colors.black),
+            label: const Text(
+              "Exit",
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          ),
           // Chat 按钮：有人接单且拿到司机 ID 时显示
           if (_currentStatus > 0 && _runnerId != null) 
             IconButton(
@@ -220,8 +231,8 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildStepLabel("Order\nTaken", 1), 
-            _buildStepLabel("Picking Up\nPassenger", 2), 
-            _buildStepLabel("Arrive\nPickup", 3), 
+            _buildStepLabel("Driver\nComming", 2), 
+            _buildStepLabel("Driver\nArrived", 3), 
             _buildStepLabel("Dropped\nOff", 4),
           ],
         ),

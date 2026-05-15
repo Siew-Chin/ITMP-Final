@@ -58,14 +58,16 @@ class _ChatPageState extends State<ChatPage> {
 
     // 2. 连接用户
     if (chatClient.state.currentUser == null) {
-      print("STEP 5: Getting token from backend");
+      print(" Step 5: Getting token and sync data from backend");
       final response = await http.get(
         Uri.parse("http://10.0.2.2:5000/get_token/${widget.currentUserId}"),
       );
 
       if (response.statusCode != 200) throw Exception("Token API failed");
 
-      final token = jsonDecode(response.body)['token'];
+      final data = jsonDecode(response.body);
+      final token = data['token'];
+
       print("STEP 7: Connecting user without extra data");
 
       await chatClient.connectUser(

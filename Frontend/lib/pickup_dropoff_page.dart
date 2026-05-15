@@ -6,20 +6,20 @@ import 'waiting_page.dart';
 import 'pickup_dropoff_tracking_page.dart'; 
 import 'package:stream_chat_flutter/stream_chat_flutter.dart'; 
 
-class FoodDeliveringPage extends StatefulWidget {
+class PickupDropoffPage extends StatefulWidget {
   final String studentID;
   final StreamChatClient client;
-  const FoodDeliveringPage({
+  const PickupDropoffPage({
     super.key, required this.studentID
     , required this.client
     });
   
 
   @override
-  State<FoodDeliveringPage> createState() => _FoodDeliveringPageState();
+  State<PickupDropoffPage> createState() => _PickupDropoffPageState();
 }
 
-class _FoodDeliveringPageState extends State<FoodDeliveringPage> {
+class _PickupDropoffPageState extends State<PickupDropoffPage> {
   final TextEditingController _pickupController = TextEditingController();
   final TextEditingController _dropOffController = TextEditingController();
   final TextEditingController _detailsController = TextEditingController();
@@ -65,6 +65,7 @@ double get _totalToCollect {
           ),
         ),
       );
+      return;
     }
     
     showDialog(
@@ -135,7 +136,7 @@ double get _totalToCollect {
     return Scaffold(
       backgroundColor: Colors.blue[50],
       appBar: AppBar(
-        title: const Text('Pickup & Dropoff', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+        title: const Text('Ride', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
@@ -294,6 +295,7 @@ double get _totalToCollect {
         children: [
           TextField(
             controller: controller,
+            enabled: !isCheck,
             decoration: InputDecoration(
               border: InputBorder.none,
               prefixIcon: Icon(icon, color: Colors.blueGrey),

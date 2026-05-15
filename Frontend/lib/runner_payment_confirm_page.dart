@@ -85,9 +85,10 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
         "status_code": 4, // 关键：传 4 会触发后端 API 5 里的收益计算逻辑
         "runner_id": widget.studentID,
       }),
-    );
+    ).timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Payment confirmed & Earnings added!")),
       );
@@ -99,9 +100,11 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
         ),
       );
     } else {
-      throw Exception("Failed to update status to completed");
+      final errorMsg = jsonDecode(response.body)['message'] ?? "Server error";
+      throw errorMsg;
     }
   } catch (e) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Error: $e")),
     );
@@ -264,20 +267,36 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
                   value: swipeValue,
                   min: 0,
                   max: 1,
-                  onChanged: (value){
+                  onChanged: (value) {
+                    // 关键 1: 如果已经在提交中，彻底屏蔽所有滑动事件
                     if (isSubmitting) return;
 
-                    setState((){
+                    setState(() {
                       swipeValue = value;
                     });
-                    if(value > 0.9){
+
+                    // 关键 2: 提高阈值到 0.95，并在确认触发后立即锁定状态
+                    if (value > 0.95) {
                       setState(() {
                         isSubmitting = true; 
-                        swipeValue = 1.0; // 自动吸附到最右边
+                        swipeValue = 1.0; // 视觉上吸附
                       });
-                      confirmMoneyCollected();
+                      
+                      // 关键 3: 延迟一小下再发请求，给 UI 留出渲染吸附动画的时间
+                      // 这样可以避免滑动条动画和网络请求抢夺主线程资源
+                      Future.delayed(const Duration(milliseconds: 200), () {
+                        confirmMoneyCollected();
+                      });
                     }
-                  }
+                  },
+                  // 关键 4: 增加 onChangeEnd，如果用户滑了一半松开，自动弹回
+                  onChangeEnd: (value) {
+                    if (value <= 0.95 && !isSubmitting) {
+                      setState(() {
+                        swipeValue = 0.0;
+                      });
+                    }
+                  },
                 )
               )
             )

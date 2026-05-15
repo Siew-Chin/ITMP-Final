@@ -144,44 +144,47 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _summaryCard("Parcel"),
-                const SizedBox(height: 25),
-                const Text(
-                  "Note:",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.redAccent,
+          child: SingleChildScrollView( // 1. 添加滚动视图
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _summaryCard("Parcel"),
+                  const SizedBox(height: 25),
+                  const Text(
+                    "Note:",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.redAccent,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                _noteBox(
-                  "Please go to the dorm and take the student ID card to get the parcel.\n\nAfter drop the parcel, remember to collect money from customer.",
-                ),
-                const SizedBox(height: 35),
-                const Text(
-                  "Task Steps",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 15),
-                _stepBtn("1. ID Card Taken", 1, 2, Colors.green),
-                const SizedBox(height: 12),
-                _stepBtn("2. Parcel Taken", 2, 3, Colors.green),
-                const SizedBox(height: 12),
-                _stepBtn("3. Dropped (Finish)", 3, 4, Colors.green),
-                const Spacer(),
-                _escapeBtn(),
-                if (isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 10),
-                    child: Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 10),
+                  _noteBox(
+                    "Please go to the dorm and take the student ID card to get the parcel.\n\nAfter drop the parcel, remember to collect money from customer.",
                   ),
-              ],
+                  const SizedBox(height: 35),
+                  const Text(
+                    "Task Steps",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15),
+                  _stepBtn("1. ID Card Taken", 1, 2, Colors.green),
+                  const SizedBox(height: 12),
+                  _stepBtn("2. Parcel Taken", 2, 3, Colors.green),
+                  const SizedBox(height: 12),
+                  _stepBtn("3. Dropped (Finish)", 3, 4, Colors.green),
+                  const SizedBox(height: 40),
+                  _escapeBtn(),
+                  if (isLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -202,7 +205,11 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
       children: [
         _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
-        _rowSummary("Dorm", liveOrder?['dropoff_point'] ?? "N/A"),
+        _rowSummary("Contact", liveOrder?['requester_contact'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Dropoff Point", liveOrder?['dropoff_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Parcel Details", liveOrder?['parcel_details'] ?? "No details"),
         const SizedBox(height: 8),
         _rowSummary( 
           "Collect",
@@ -222,30 +229,37 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
     ),
   );
   Widget _rowSummary(
-  String l,
-  String v, {
-  Color valueColor = Colors.black,
-}) =>
-    Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          l,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 15,
-          ),
+    String l,
+    String v, {
+    Color valueColor = Colors.black,
+  }) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                v,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: valueColor,
+                ),
+              ),
+            ),
+          ],
         ),
-        Text(
-          v,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: valueColor,
-          ),
-        ),
-      ],
-    );
+      );
   Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(

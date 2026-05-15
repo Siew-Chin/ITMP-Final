@@ -189,9 +189,9 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F3A5A)),
                 ),
                 const SizedBox(height: 15),
-                _stepBtn("1. Food / Item Collected", 1, 2, const Color(0xFF6C8EF5)),
+                _stepBtn("1. Food Ordered", 1, 2, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 12),
-                _stepBtn("2. Arrived at Destination", 2, 3, const Color(0xFF6C8EF5)),
+                _stepBtn("2.  Food Delivering", 2, 3, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 12),
                 _stepBtn("3. Delivered & Proof", 3, 4, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 40),
@@ -223,12 +223,19 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
       children: [
         _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
-        _rowSummary("Dorm", liveOrder?['dropoff_point'] ?? "N/A"),
+
+        _rowSummary("Drop-off Point", liveOrder?['dropoff_point'] ?? "N/A"),
         const SizedBox(height: 8),
 
-        _rowSummary("Pick Up Stall / Shop", liveOrder?['stall_name'] ?? widget.order['shop_name'] ?? "N/A"),
+        _rowSummary("Pick Up Stall", liveOrder?['stall_name'] ?? widget.order['shop_name'] ?? "N/A"),
+        const SizedBox(height: 8),
+
+        _rowSummary("Food Name", liveOrder?['food_name'] ?? "N/A"),
+        const SizedBox(height: 8),
+
+        _rowSummary("Food Details", liveOrder?['food_details'] ?? "N/A"),
+
         const Divider(height: 20),
-        
         _rowSummary( 
           "Collect",
           "RM ${double.tryParse(

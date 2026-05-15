@@ -48,60 +48,89 @@ def generate_token(user_id):
 @app.route('/register', methods=['POST'])
 def register():
     try:
-        data = request.get_json()
-        
-        # 1. 获取前端传来的数据
-        name = data.get('name')
-        student_id = data.get('student_id')
-        password = data.get('password')
-        contact = data.get('contact')
-        dorm = data.get('dorm')
+        # 1. 接收 form-data
+        name = request.form.get('name')
+        student_id = request.form.get('student_id')
+        password = request.form.get('password')
+        contact = request.form.get('contact')
+        dorm = request.form.get('dorm')
 
-        # 2. 基本验证：确保必要字段不为空
         if not all([name, student_id, password, contact, dorm]):
             return jsonify({"message": "Missing required fields"}), 400
 
-        # 3. 检查用户是否已经存在 (根据 student_id)
         if db.user_detail.find_one({"student_id": student_id}):
             return jsonify({"message": "Student ID already registered"}), 409
 
-        # 4. 构造新用户对象
+        # 2. 处理头像上传
+        profile_image_name = None
+        if 'profile_image' in request.files:
+            file = request.files['profile_image']
+            if file.filename != '':
+                ext = file.filename.split('.')[-1]
+                profile_image_name = f"profile_{student_id}.{ext}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], profile_image_name)
+                file.save(file_path)
+
+        # 3. 构造用户对象（加入 profile_image）
         new_user = {
             "name": name,
             "student_id": student_id,
-            "password": password,  # 实际开发建议使用 werkzeug.security 加密
+            "password": password,
             "contact": contact,
             "dorm": dorm,
-            "role": "student",     # 默认角色
+            "profile_image": profile_image_name, # 保存文件名
+            "role": "student",
+            "total_earnings": 0.0,
             "created_at": datetime.utcnow()
         }
 
-        # 5. 插入数据库
         db.user_detail.insert_one(new_user)
         
-        return jsonify({
-            "message": "User registered successfully",
-            "student_id": student_id
-        }), 200
+        # 4. (可选) 注册成功后顺便同步给 Stream Chat
+        try:
+            image_url = f"http://10.0.2.2:5000/static/proofs/{profile_image_name}" if profile_image_name else ""
+            stream_client.upsert_user({
+                "id": student_id,
+                "name": name,
+                "image": image_url
+            })
+        except:
+            pass
+
+        return jsonify({"message": "User registered successfully", "student_id": student_id}), 200
 
     except Exception as e:
         print(f"Register Error: {e}")
         return jsonify({"message": "Server error", "error": str(e)}), 500
-
-#API 2: login
+    
+# API 2: login
 @app.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
-        user = db.user_detail.find_one({"student_id": data['student_id']})
-        if not user or user['password'] != data['password']:
-            return jsonify({"message": "Wrong password"}), 401
+        student_id = data.get('student_id')
+        password = data.get('password')
+
+        # 1. 查找用户是否存在
+        user = db.user_detail.find_one({"student_id": student_id})
+        
+        if not user:
+            # 如果找不到该 ID，返回 404 (Not Found)
+            return jsonify({"message": "Student ID not found"}), 404
+        
+        # 2. 如果 ID 存在，验证密码
+        if user['password'] != password:
+            # 如果密码不对，返回 401 (Unauthorized)
+            return jsonify({"message": "Incorrect password"}), 401
+            
+        # 3. 验证通过
         return jsonify({
             "message": "Login success",
             "role": user.get('role', 'student'),
             "name": user.get('name', 'User')
         }), 200
-    except Exception as e:  # 确保这行和 try 对齐，且必须存在
+
+    except Exception as e: 
         return jsonify({"error": str(e)}), 500
 
 #API 3: create parcel order
@@ -137,6 +166,7 @@ def create_parcel_order():
 
             # parcel details
             "parcel_qty": data.get("parcel_qty"),
+            "parcel_details": data.get("parcel_details", ""),
 
             # 存真实 dorm
             "dropoff_point": dropoff_point, 
@@ -193,6 +223,12 @@ def update_status():
         order = db.order.find_one({'order_id': order_id})
         if not order:
             return jsonify({"error": "Order not found"}), 404
+        
+        if order.get("is_cancelled") or int(order.get("status_code", 0)) == -1:
+            return jsonify({"error": "Order has been cancelled"}), 400
+
+        if new_status_code == 1 and int(order.get("status_code", 0)) != 0:
+            return jsonify({"error": "Order is no longer available"}), 400
 
         # 2. 基本更新逻辑
         update_fields = {'status_code': new_status_code}
@@ -223,8 +259,11 @@ def update_status():
             if latest_order.get('is_settled'):
                 return jsonify({"message": "Already settled"}), 200
 
-            # 统一逻辑：无论是快递还是代购，最终给 Runner 的钱都存这个字段
-            final_earning = float(latest_order.get('runner_profit', 0))
+            try:
+                profit_val = latest_order.get('runner_profit')
+                final_earning = float(profit_val) if profit_val else 0.0
+            except (ValueError, TypeError):
+                final_earning = 0.0
 
             db.order.update_one(
                 {'order_id': order_id}, 
@@ -290,35 +329,37 @@ def upload_proof():
 def serve_proof(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# API 6-2: Get Stream Token
-@app.route('/get_token/<user_id>')
+# API 6-2: Generate Stream Chat Token
+@app.route('/get_token/<user_id>', methods=['GET'])
 def get_token(user_id):
-
     try:
+        # 1. 从数据库获取真实的用户资料
+        user_info = users_col.find_one({"student_id": user_id})
+        
+        # 默认值处理
+        user_name = user_info.get("name", f"User {user_id}") if user_info else f"User {user_id}"
+        
+        # 2. 构造头像 URL (确保图片已在 UPLOAD_FOLDER)
+        image_url = ""
+        if user_info and user_info.get("profile_image"):
+            image_url = f"http://10.0.2.2:5000/static/proofs/{user_info['profile_image']}"
 
+        # 3. 将资料同步给 Stream Chat
         stream_client.upsert_user({
             "id": str(user_id),
-            "name": f"User {user_id}",
-            "role": "admin"
+            "name": user_name,
+            "image": image_url, 
+            "role": "admin"    
         })
 
+        # 4. 生成 Token
         token = stream_client.create_token(str(user_id))
-
-        print("TOKEN CREATED")
-        print(token)
-
-        return jsonify({
-            "token": token
-        })
+        
+        return jsonify({"token": token})
 
     except Exception as e:
-
-        print("STREAM ERROR")
-        print(e)
-
-        return jsonify({
-            "error": str(e)
-        }), 500
+        print(f"STREAM ERROR: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # API 7: Submit Feedback
 @app.route('/api/order/feedback', methods=['POST'])
@@ -575,7 +616,7 @@ def create_grocery_order():
 @app.route('/api/item/create', methods=['POST'])
 def create_item_order():
     data = request.get_json()
-    order_id = f"GRO-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}"
+    order_id = f"ITEM-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}"
 
     user = db.user_detail.find_one({
         "student_id": data.get("requester_id")
@@ -617,7 +658,10 @@ def create_item_order():
 def get_runner_market():
     try:
         # 只展示 status_code 为 0 (待接单) 的任务
-        tasks = list(db.order.find({"status_code": 0}))
+        tasks = list(db.order.find({
+            "status_code": 0, 
+            "is_cancelled": {"$ne": True}}
+            ))
         
         formatted_tasks = []
         for task in tasks:
@@ -652,7 +696,8 @@ def get_runner_tasks():
     # Statuses 1 (Taken), 2 (Picking), 3 (Picked)
     current = list(db.order.find({
         "runner_id": runner_id, 
-        "status_code": {"$in": [1, 2, 3]}
+        "status_code": {"$in": [1, 2, 3]},
+        "is_cancelled": {"$ne": True}
     }))
     return jsonify(parse_json(current)), 200
 
@@ -721,6 +766,10 @@ def get_order_detail(order_id):
             "parcel_details": order.get("parcel_details"),
             "ride_details": order.get("ride_details"),
             "item_details": order.get("item_details"),
+
+            "parcel_qty": order.get("parcel_qty"),
+
+            "shop_name": order.get("shop_name"),
             "shopping_details": order.get("shopping_details"),
 
             "is_urgent": order.get("is_urgent", False),
@@ -814,19 +863,80 @@ def get_feedback_sent():
 #API 23: Update user profile
 @app.route('/api/user/update_info', methods=['POST'])
 def update_user_profile():
-    data = request.get_json()
-    student_id = data.get('student_id')
+    try:
+        # 1. 兼容性处理：如果前端传的是 JSON，用 request.get_json()；如果是 form-data，用 request.form
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
 
-    result = users_col.update_one(
-        {"student_id": student_id},
-        {"$set": {
-            "name": data.get('name'),
-            "password": data.get('password'),
-            "contact": data.get('contact'),
-            "dorm": data.get('dorm'),
-        }}
-    )
-    return jsonify({"msg": "Profile updated"}) if result.matched_count > 0 else (jsonify({"msg": "User not found"}), 404)
+        student_id = data.get('student_id')
+        if not student_id:
+            return jsonify({"msg": "student_id is required"}), 400
+
+        # 2. 构造基础更新字典
+        update_fields = {}
+        
+        # 定义哪些字段是允许更新的
+        fields_to_check = ['name', 'password', 'contact', 'dorm']
+        
+        for field in fields_to_check:
+            val = data.get(field)
+            # 只有当前端传过来的值不是 None 且不是空字符串时，才更新该字段
+            if val is not None and val.strip() != "":
+                update_fields[field] = val.strip()
+
+        # 3. 复用你的文件上传逻辑
+        if 'profile_image' in request.files:
+            file = request.files['profile_image']
+            if file.filename != '':
+                # 使用 uuid 或 student_id 防止文件名重复
+                ext = file.filename.split('.')[-1]
+                filename = f"profile_{student_id}.{ext}"
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                
+                # 将图片路径或文件名存入数据库
+                update_fields["profile_image"] = filename
+
+        if not update_fields:
+            return jsonify({"msg": "No changes detected"}), 200
+
+        # 4. 执行数据库更新
+        result = users_col.update_one(
+            {"student_id": student_id},
+            {"$set": update_fields}
+        )
+
+        if result.matched_count > 0:
+            # 5. 同步更新 Stream Chat 资料
+            try:
+                # 准备同步到 Stream Chat 的数据
+                stream_update_data = {"id": student_id}
+                
+                if "name" in update_fields:
+                    stream_update_data["name"] = update_fields["name"]
+                    
+                # 核心：如果有新图片，同步图片 URL
+                if "profile_image" in update_fields:
+                    # 拼接成完整的公网/局域网访问路径
+                    full_image_url = f"http://10.0.2.2:5000/static/proofs/{update_fields['profile_image']}"
+                    stream_update_data["image"] = full_image_url
+
+                # 调用 Stream SDK 更新用户资料
+                if len(stream_update_data) > 1: # 除了 ID 还有其他东西才更新
+                    stream_client.upsert_user(stream_update_data)
+                
+            except Exception as stream_err:
+                print(f"Stream Sync Warning: {stream_err}")
+
+            return jsonify({"msg": "Profile updated"})
+        else:
+            return jsonify({"msg": "User not found"}), 404
+
+    except Exception as e:
+        return jsonify({"msg": "Server error", "error": str(e)}), 500
+    
 
 # API 24: Get User Profile
 @app.route('/api/user/profile', methods=['GET'])
@@ -916,6 +1026,196 @@ def get_order_history(student_id):
     except Exception as e:
         print(f"History Error: {e}")
         return jsonify({"error": str(e)}), 500
+    
+# API 26 (结合版): 获取用户详细资料
+@app.route('/api/user/get_info/<student_id>', methods=['GET'])
+def get_user_info(student_id):
+    try:
+        user = users_col.find_one(
+            {"student_id": student_id}, 
+            {"_id": 0, "password": 0}
+        )
+        
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+        
+        if user.get("profile_image"):
+            user["image_url"] = f"http://10.0.2.2:5000/static/proofs/{user['profile_image']}"
+        else:
+            user["image_url"] = "" 
 
+        return jsonify(user), 200
+
+    except Exception as e:
+        print(f"Get Profile Error: {e}")
+        return jsonify({"message": "Server error", "error": str(e)}), 500
+    
+
+# API 27: Runner earning history
+@app.route('/api/runner/earning_history', methods=['GET'])
+def get_earning_history():
+    runner_id = request.args.get('runner_id')
+
+    completed = list(order_col.find({
+        "runner_id": runner_id,
+        "status_code": 4
+    }).sort("created_at", -1))
+
+    tasks = []
+    total = 0
+    today = 0
+    today_date = datetime.utcnow().date()
+
+    for task in completed:
+        earning = float(task.get('runner_profit') or 0)
+        total += earning
+
+        created_at = task.get("created_at")
+        is_today = False
+
+        if isinstance(created_at, datetime):
+            is_today = created_at.date() == today_date
+            date_text = created_at.strftime("%Y-%m-%d %H:%M")
+        else:
+            date_text = str(created_at or "")
+
+        if is_today:
+            today += earning
+
+        tasks.append({
+            "task_type": task.get("task_type")
+                or task.get("service_type")
+                or task.get("order_type")
+                or task.get("type")
+                or "Task",
+            "earning": earning,
+            "date": date_text,
+        })
+
+    return jsonify({
+        "today_earning": today,
+        "total_earning": total,
+        "tasks": tasks
+    }), 200
+
+# API 28: Runner Rating Status
+@app.route('/api/runner/rating_status', methods=['GET'])
+def get_runner_rating_status():
+    try:
+        runner_id = request.args.get("runner_id")
+        if not runner_id:
+            return jsonify({"error": "runner_id is required"}), 400
+
+        completed_tasks = list(order_col.find({
+            "runner_id": runner_id,
+            "status_code": 4
+        }))
+
+        completed_task_count = len(completed_tasks)
+
+        ratings = []
+        for task in completed_tasks:
+            feedback = task.get("feedback")
+            if feedback and feedback.get("rating") is not None:
+                ratings.append(float(feedback.get("rating")))
+
+        average_rating = sum(ratings) / len(ratings) if ratings else None
+
+        should_warn = (
+            completed_task_count >= 5
+            and completed_task_count <= 9
+            and average_rating is not None
+            and average_rating < 3.0
+        )
+
+        should_block = (
+            completed_task_count >= 10
+            and average_rating is not None
+            and average_rating < 3.0
+        )
+
+        return jsonify({
+            "completed_task_count": completed_task_count,
+            "average_rating": average_rating,
+            "should_warn": should_warn,
+            "should_block": should_block
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# API 29: User's Current Orders 
+@app.route('/api/user/current_orders', methods=['GET'])
+def get_user_current_orders():
+    try:
+        requester_id = request.args.get("requester_id")
+        if not requester_id:
+            return jsonify({"error": "requester_id is required"}), 400
+
+        orders = list(order_col.find({
+            "requester_id": requester_id,
+            "status_code": {"$lt": 4},
+            "is_cancelled": {"$ne": True}
+        }).sort("created_at", -1))
+
+        result = []
+
+        for order in orders:
+            runner_id = order.get("runner_id")
+            runner_name = "Waiting for runner"
+
+            if runner_id:
+                runner = users_col.find_one({"student_id": runner_id})
+                runner_name = runner.get("name") if runner else runner_id
+
+            result.append({
+                "order_id": order.get("order_id"),
+                "type": order.get("type", "order"),
+                "status_code": order.get("status_code", 0),
+                "runner_id": runner_id,
+                "runner_name": runner_name,
+                "total_to_collect": order.get("total_to_collect", 0),
+            })
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+#API 30: Cancel Order (only if not taken by runner yet)
+@app.route('/api/order/cancel', methods=['POST'])
+def cancel_order():
+    try:
+        data = request.json
+        order_id = data.get("order_id")
+        requester_id = data.get("requester_id")
+
+        order = db.order.find_one({
+            "order_id": order_id,
+            "requester_id": requester_id
+        })
+
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+
+        if int(order.get("status_code", 0)) > 0:
+            return jsonify({"error": "Order already taken, cannot cancel"}), 400
+
+        db.order.update_one(
+            {"order_id": order_id},
+            {
+                "$set": {
+                    "status_code": -1,
+                    "is_cancelled": True,
+                    "cancelled_at": datetime.utcnow()
+                }
+            }
+        )
+
+        return jsonify({"message": "Order cancelled"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

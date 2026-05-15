@@ -87,7 +87,7 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/ride/create'),
+        Uri.parse('http://10.0.2.2:5000/api/item/create'),
         headers: {"Content-Type": "application/json"},
         body: json.encode({
           "requester_id": widget.studentID,
@@ -97,6 +97,7 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
           "item_price": 0,
           "runner_profit": _runnerProfit,
           "total_to_collect": _totalToCollect,
+          "parcel_qty": parcel_qty,
 
           "pickup_point": _pickupController.text,
           "dropoff_point": _dropOffController.text,
@@ -242,21 +243,25 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
             ),
             const SizedBox(height: 25),
             
-            _buildSectionTitle("Any details? (Optional)"),
+            const Text("Any details? (Optional)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 15),
-              decoration: _cardDecoration(),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha:0.1), blurRadius: 10, spreadRadius: 2)],
+              ),
               child: TextField(
                 controller: _detailsController,
                 maxLines: 2,
                 decoration: const InputDecoration(
                   border: InputBorder.none,
-                  hintText: "e.g. I'm wearing a red shirt.",
+                  hintText: "e.g. The item is fragile, please handle with care.",
                   hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ),
             ),
-
             const SizedBox(height: 25),
 
             // Urgent 
@@ -338,7 +343,8 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
       ),
     );
   }
-    Widget _buildSectionTitle(String title) {
+
+  Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
