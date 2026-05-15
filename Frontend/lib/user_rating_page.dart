@@ -4,13 +4,15 @@ import 'package:rating_dialog/rating_dialog.dart';
 import 'service_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 final String url =  "http://google.com";
 
 class UserRatingPage extends StatefulWidget{
   final String studentID;
   final String orderId;
-  const UserRatingPage ({super.key, required this.studentID, required this.orderId});
+  final StreamChatClient client;
+  const UserRatingPage ({super.key, required this.studentID, required this.orderId, required this.client});
 
   @override
   State<UserRatingPage> createState() => _UserRatingPageState();
@@ -64,6 +66,7 @@ class _UserRatingPageState extends State<UserRatingPage>{
           MaterialPageRoute(
             builder: (context) => ServicePage(
               studentID: widget.studentID,
+              client: widget.client,
             ),
             )
         );

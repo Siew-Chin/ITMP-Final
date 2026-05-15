@@ -4,17 +4,20 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'chat_page.dart'; 
 import 'user_proof_photo_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ParcelTrackingPage extends StatefulWidget {
   final String orderId;
   final double totalPrice;
   final String studentID;
+  final StreamChatClient client;
 
   const ParcelTrackingPage({
     super.key,
     required this.orderId,      
     required this.totalPrice,   
     required this.studentID,
+    required this.client,
   });
 
   @override
@@ -72,18 +75,39 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
+          TextButton.icon(
+            onPressed: () {
+              _timer?.cancel();
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.close, color: Colors.black),
+            label: const Text(
+              "Exit",
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          ),
           // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
           if (_currentStatus > 0 && _runnerId != null) 
             IconButton(
               icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
               onPressed: () {
+                final String targetRunnerId = _runnerId?.toString() ?? '';
+
+                if (targetRunnerId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Waiting for driver to connect...")),
+                  );
+                  return;
+                }
+
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
                     builder: (context) => ChatPage(
-                      studentID: widget.studentID,
-                      runnerID: _runnerId!, 
-                    ),
+                      currentUserId: widget.studentID,
+                      otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
+                      client: widget.client,
+                    )
                   ),
                 );
               },
@@ -203,6 +227,7 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
                     studentID: widget.studentID,
                     orderId: widget.orderId,
                     imageUrl: _proofImageUrl!,
+                    client: widget.client,
                   ),
                 ),
               );

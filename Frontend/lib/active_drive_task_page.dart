@@ -4,14 +4,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'chat_page.dart'; 
 import 'runner_payment_confirm_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ActiveDriveTaskPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
   const ActiveDriveTaskPage({
     Key? key,
     required this.order,
     required this.runnerId,
+    required this.client,
   }) : super(key: key);
 
   @override
@@ -63,8 +66,10 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
             amount: double.tryParse(widget.order['delivery_fee'].toString()) ?? 0.0,
             // 3. 提取客户相关信息
             customerName: widget.order['customer_name'] ?? "User",
-            customerStudentID: widget.order['requester_id']?.toString() ?? "N/A",
+            // 修改第 84 行左右
+            customerStudentID: liveOrder?['requester_id']?.toString() ?? widget.order['requester_id']?.toString() ?? "N/A",
             customerContact: widget.order['requester_contact']?.toString() ?? "N/A",
+            client: widget.client,
           ),
       ),
     );
@@ -107,15 +112,31 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           style: TextStyle(color: Colors.black87),
         ),
         actions: [
+          // 修改 AppBar 里的聊天按钮
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatPage(
-                studentID: widget.order['requester_id'], // 拿到下单人 ID
-                runnerID: widget.runnerId,
-              )),
-            ),
+            onPressed: () {
+              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
+              final String targetId = liveOrder?['requester_id']?.toString() ?? 
+                                      widget.order['requester_id']?.toString() ?? 
+                                      '';
+
+              if (targetId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Error: Requester ID not found")),
+                );
+                return;
+              }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatPage(
+                  client: widget.client,
+                  currentUserId: widget.runnerId,
+                  otherUserId: targetId,
+                )),
+              );
+            },
           ),
         ],
         backgroundColor: Colors.transparent,
@@ -133,54 +154,57 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _summaryCard("Ride"),
-                const SizedBox(height: 25),
-                const Text(
-                  "Note:",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.redAccent,
+          child: SingleChildScrollView( // 1. 添加滚动视图
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _summaryCard("Ride"),
+                  const SizedBox(height: 25),
+                  const Text(
+                    "Note:",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.redAccent,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                _noteBox(
-                   "Please verify the passenger identity. Drive safely and follow traffic rules.\n\nCollect payment at the end of the ride.",
-                ),
-                const SizedBox(height: 35),
-                const Text(
-                  "Task Steps",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 15),
-                _stepBtn(
-                  "1. Passenger Picked Up",
-                  1,
-                  2,
-                  const Color(0xFF4A90E2),
-                ),
-                const SizedBox(height: 12),
-                _stepBtn(
-                  "2. Arrived at Destination",
-                  2,
-                  3,
-                  const Color(0xFF4A90E2),
-                ),
-                const SizedBox(height: 12),
-                _stepBtn("3. Finish Ride", 3, 4, const Color(0xFF4A90E2)),
-                const Spacer(),
-                _escapeBtn(),
-                if (isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 10),
-                    child: Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 10),
+                  _noteBox(
+                    "Please verify the passenger identity. Drive safely and follow traffic rules.\n\nCollect payment at the end of the ride.",
                   ),
-              ],
+                  const SizedBox(height: 35),
+                  const Text(
+                    "Task Steps",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15),
+                  _stepBtn(
+                    "1. Picking Up Passenger",
+                    1,
+                    2,
+                    const Color(0xFF4A90E2),
+                  ),
+                  const SizedBox(height: 12),
+                  _stepBtn(
+                    "2. Arrive at Pickup Point",
+                    2,
+                    3,
+                    const Color(0xFF4A90E2),
+                  ),
+                  const SizedBox(height: 12),
+                  _stepBtn("3. Finish Ride", 3, 4, const Color(0xFF4A90E2)),
+                  const SizedBox(height: 40),
+                  _escapeBtn(),
+                  if (isLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -201,9 +225,13 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
       children: [
         _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
+        _rowSummary("Contact", liveOrder?['requester_contact'] ?? "N/A"),
+        const SizedBox(height: 8),
         _rowSummary("Pickup Point", liveOrder?['pickup_point'] ?? "N/A"),
         const SizedBox(height: 8),
         _rowSummary("Dropoff Point", liveOrder?['dropoff_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Ride Details", liveOrder?['ride_details'] ?? "N/A"),
         const SizedBox(height: 8),
         _rowSummary( 
           "Collect",

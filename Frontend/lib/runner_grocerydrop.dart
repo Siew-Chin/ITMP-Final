@@ -4,15 +4,18 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'chat_page.dart';
 import 'runner_proof_photo_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class RunnerGroceryDrop extends StatefulWidget {
   final dynamic order; // 统一使用 order 对象
   final String runnerId;
-  
+  final StreamChatClient client;
+
   const RunnerGroceryDrop({
     Key? key,
     required this.order,
     required this.runnerId,
+    required this.client,
   }) : super(key: key);
 
   @override
@@ -72,6 +75,7 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
           builder: (context) => RunnerProofPhotoPage(
             orderId: widget.order['order_id'].toString(),
             runnerId: widget.runnerId,
+            client: widget.client,
           ),
         ),
       );
@@ -87,13 +91,21 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
         };
 
       if (currentStatus == 2 && nextS == 3) {
-        String receiptAmount = _amountController.text.trim();
+        String receiptAmountText = _amountController.text.trim();
+        double? receiptAmount = double.tryParse(receiptAmountText);
 
-        if (receiptAmount.isEmpty) {
-          throw Exception("Please enter receipt amount");
+        if (receiptAmountText.isEmpty || receiptAmount == null || receiptAmount <= 0) {
+          setState(() => isLoading = false); // 停止 loading
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Please enter a valid amount (greater than 0)"),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return; // 拦截，不继续执行请求
         }
 
-        bodyData["amount"] = receiptAmount;
+        bodyData["amount"] = receiptAmountText;
       }
 
       final response = await http.post(
@@ -166,13 +178,28 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatPage(
-                studentID: widget.order['requester_id']?.toString() ?? "", 
-                runnerID: widget.runnerId,
-              )),
-            ),
+            onPressed: () {
+              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
+              final String targetId = liveOrder?['requester_id']?.toString() ?? 
+                                      widget.order['requester_id']?.toString() ?? 
+                                      '';
+
+              if (targetId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Error: Requester ID not found")),
+                );
+                return;
+              }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatPage(
+                  client: widget.client,
+                  currentUserId: widget.runnerId,
+                  otherUserId: targetId,
+                )),
+              );
+            },
           ),
         ],
         backgroundColor: Colors.transparent,
@@ -218,9 +245,9 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F3A5A)),
                 ),
                 const SizedBox(height: 15),
-                _stepBtn("1. Arriving at the Grocery Shop", 1, 2, const Color(0xFF6C8EF5)),
+                _stepBtn("1. Arrived Grocery Shop", 1, 2, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 12),
-                _stepBtn("2. Grocery Picked Up", 2, 3, const Color(0xFF6C8EF5)),
+                _stepBtn("2. Grocery Purchased", 2, 3, const Color(0xFF6C8EF5)),
                 if (currentStatus == 2)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
@@ -270,12 +297,32 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
       children: [
         _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
-        _rowSummary("Dorm", liveOrder?['dropoff_point'] ?? "N/A"),
+        _rowSummary("Contact", liveOrder?['requester_contact'] ?? "N/A"),
         const SizedBox(height: 8),
-
-        _rowSummary("Shop", liveOrder?['shop_name'] ?? widget.order['shop_name'] ?? "N/A"),
+        _rowSummary("Pickup Point", liveOrder?['shop_name'] ??widget.order['shop_name'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Dropoff Point", liveOrder?['dropoff_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Grocery Details", liveOrder?['shopping_details'] ?? "N/A"),
         const Divider(height: 20),
-        
+        const Text(
+          "Shopping List:",
+          style: TextStyle(
+            color: Colors.black45,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          (liveOrder?['shopping_list'] ?? widget.order['shopping_list'] ?? "No details available"),
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF333333),
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const Divider(height: 20),
         _rowSummary( 
           "Collect",
           "RM ${double.tryParse(

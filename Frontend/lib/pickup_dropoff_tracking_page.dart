@@ -5,17 +5,19 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'chat_page.dart'; 
 import 'user_rating_page.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class PickupDropoffTrackingPage extends StatefulWidget {
   final String orderId;
   final double totalPrice;
   final String studentID; // 记得这里也要加 studentID 
-
+  final StreamChatClient client; // 添加 StreamChatClient
   const PickupDropoffTrackingPage({
     super.key,
     required this.orderId,      
     required this.totalPrice,   
     required this.studentID,
+    required this.client,
   });
 
   @override
@@ -71,18 +73,39 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
+          TextButton.icon(
+            onPressed: () {
+              _timer?.cancel();
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.close, color: Colors.black),
+            label: const Text(
+              "Exit",
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          ),
           // Chat 按钮：有人接单且拿到司机 ID 时显示
           if (_currentStatus > 0 && _runnerId != null) 
             IconButton(
               icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
               onPressed: () {
+                final String targetRunnerId = _runnerId?.toString() ?? '';
+
+                if (targetRunnerId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Waiting for driver to connect...")),
+                  );
+                  return;
+                }
+
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
                     builder: (context) => ChatPage(
-                      studentID: widget.studentID,
-                      runnerID: _runnerId!, 
-                    ),
+                      currentUserId: widget.studentID,
+                      otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
+                      client: widget.client,
+                    )
                   ),
                 );
               },
@@ -160,6 +183,7 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
                     builder: (context) => UserRatingPage(
                       studentID: widget.studentID,
                       orderId: widget.orderId,
+                      client: widget.client,
                     ),
                   ),
                 );
@@ -207,8 +231,8 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildStepLabel("Order\nTaken", 1), 
-            _buildStepLabel("Picking Up\nPassenger", 2), 
-            _buildStepLabel("Arrive\nPickup", 3), 
+            _buildStepLabel("Driver\nComming", 2), 
+            _buildStepLabel("Driver\nArrived", 3), 
             _buildStepLabel("Dropped\nOff", 4),
           ],
         ),

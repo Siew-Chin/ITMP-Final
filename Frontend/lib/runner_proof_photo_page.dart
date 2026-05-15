@@ -5,15 +5,18 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:my_new_app/runner_payment_confirm_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class RunnerProofPhotoPage extends StatefulWidget {
   final String orderId;
   final String runnerId;
+  final StreamChatClient client;
 
   const RunnerProofPhotoPage({
     super.key, 
     required this.orderId,
     required this.runnerId,
+    required this.client,
     });
 
   @override
@@ -113,6 +116,7 @@ class _RunnerProofPhotoPageState extends State<RunnerProofPhotoPage>{
       MaterialPageRoute(
         builder: (context) => RunnerPaymentConfirmPage(
           studentID: widget.runnerId,
+          client: widget.client,
           // 更加稳健的金额解析
           amount: tryParseDouble(data['total_price']), 
           

@@ -10,10 +10,20 @@ import 'food_detail_page.dart';
 import 'runner_groceryorder.dart';
 import 'runner_deliverytake.dart';
 
+import "active_drive_task_page.dart";
+import "active_food_task_page.dart";
+import "runner_grocerydrop.dart";
+import "active_parcel_task_page.dart";
+import "runner_deliverydrop.dart";
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
+
+import 'runner_earning_history_page.dart'; // 请确保文件名匹配
+
 //12
 class RunnerMainMenu extends StatefulWidget {
   final String runnerId;
-  const RunnerMainMenu({Key? key, required this.runnerId}) : super(key: key);
+  final StreamChatClient client;
+  const RunnerMainMenu({Key? key, required this.runnerId, required this.client}) : super(key: key);
 
   @override
   _RunnerMainMenuState createState() => _RunnerMainMenuState();
@@ -81,98 +91,130 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     }
   }
 
-  // 1. 修复注销函数缺失问题
-  void _handleLogout() {
-    Navigator.of(context).popUntil((route) => route.isFirst);
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        // 修复：studentID 改为 runnerId (根据你的类定义)
-        title: Text('Runner: ${widget.runnerId}'),
-        backgroundColor: Colors.blue[200],
-        elevation: 0,
-        foregroundColor: Colors.black87,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Logout',
+    return RefreshIndicator(
+      onRefresh: _fetchDashboardData,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildEarningsCard(),
+                  const SizedBox(height: 20),
+                  _buildSectionHeader("Current Active Tasks", currentTasks.length),
+                ],
+              ),
+            ),
+          ),
+
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _buildTaskCard(currentTasks[index], isActive: true),
+              ),
+              childCount: currentTasks.length,
+            ),
+          ),
+
+          // 4. 任务大厅标题
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+              child: _buildSectionHeader("Market Available", availableTasks.length),
+            ),
+          ),
+
+          // 5. 渲染大厅里的任务
+          availableTasks.isEmpty
+              ? const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: Text("No order yet 😴")),
+                )
+              : SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final order = availableTasks[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildTaskCard(order),
+                      );
+                    },
+                    childCount: availableTasks.length,
+                  ),
+                ),
+
+          // 底部提示
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 30),
+              child: Center(
+                child: Text(
+                  "Swipe down to refresh orders",
+                  style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
+                ),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 120),
           ),
         ],
-      ),
-      // 使用 Caryn 的 CustomScrollView 作为主结构，这样可以滚动且支持下拉刷新
-      body: RefreshIndicator(
-        onRefresh: _fetchDashboardData,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // 2. 将你的收益卡片放入 Sliver 中
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildEarningsCard(),
-                    const SizedBox(height: 20),
-                    _buildSectionHeader("Current Active Tasks", currentTasks.length),
-                  ],
-                ),
-              ),
+      )
+    );
+  }
+
+  Widget _buildEarningsCard() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RunnerEarningHistoryPage(runnerId: widget.runnerId),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(25),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withValues(alpha: 0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
-
-            // 3. 渲染你手头正在做的任务 (Active Tasks)
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildTaskCard(currentTasks[index], isActive: true),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 加上一个小提示图标或文字，让用户知道可以点击（可选）
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Total earning:",
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
-                childCount: currentTasks.length,
-              ),
+                Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
+              ],
             ),
-
-            // 4. 任务大厅标题
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                child: _buildSectionHeader("Market Available", availableTasks.length),
-              ),
-            ),
-
-            // 5. 渲染大厅里的任务
-            availableTasks.isEmpty
-                ? const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(child: Text("No order yet 😴")),
-                  )
-                : SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final order = availableTasks[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _buildTaskCard(order),
-                        );
-                      },
-                      childCount: availableTasks.length,
-                    ),
-                  ),
-
-            // 底部提示
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 30),
-                child: Center(
-                  child: Text(
-                    "Swipe down to refresh orders",
-                    style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
-                  ),
-                ),
+            const SizedBox(height: 5),
+            Text(
+              "RM ${totalEarnings.toStringAsFixed(2)}",
+              style: const TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
             ),
           ],
@@ -181,56 +223,16 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     );
   }
 
-  Widget _buildEarningsCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha:0.8),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withValues(alpha:0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Total earning:",
-            style: TextStyle(color: Colors.grey, fontSize: 16),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            "RM ${totalEarnings.toStringAsFixed(2)}",
-            style: const TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSectionHeader(String title, int count) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
+        Text(title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold, color: Color(0xFF2F3A5A))),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.blueAccent.withValues(alpha:0.2),
-            borderRadius: BorderRadius.circular(20),
+            color: const Color(0xFF6C8EF5).withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             count.toString(),
@@ -254,17 +256,17 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
 
     Color iconColor;
 
-    if (type == 'drive' || type == 'ride') {
+    if (type == 'ride') {
       iconData = Icons.local_taxi_rounded;
-      iconColor = Colors.orange;
+      iconColor = const Color(0xFFF9A825);
 
     } else if (type == 'food') {
       iconData = Icons.ramen_dining_rounded;
-      iconColor = Colors.redAccent;
+      iconColor = const Color(0xFFFF5252);
 
     } else if (type == 'grocery') {
       iconData = Icons.shopping_cart_rounded;
-      iconColor = Colors.green;
+      iconColor = const Color(0xFF4CAF50);
 
     } else if (type == 'item') {
       iconData = Icons.inventory_2_rounded;
@@ -276,30 +278,141 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     }
     return GestureDetector(
       onTap: () {
+
         Widget destination;
 
-        // Change 'Driving' to 'Drive' to match your MongoDB screenshot
-        String type = (task['type'] ?? 'item').toString().toLowerCase();
+        String type =
+            (task['type'] ?? 'item')
+            .toString()
+            .toLowerCase();
 
-        if (type == 'drive' || type == 'ride') {
-          destination = DriveDetailPage(order: task, runnerId: widget.runnerId);
+        int statusCode =
+            int.tryParse(task['status_code'].toString()) ?? 0;
 
-        } else if (type == 'food') {
-          destination = FoodDetailPage(order: task, runnerId: widget.runnerId);
+        // =========================
+        // ACTIVE TASK
+        // =========================
 
-        } else if (type == 'grocery') {
-          destination = RunnerGroceryOrder(order: task, runnerId: widget.runnerId);
+        if (statusCode >= 1) {
 
-        } else if (type == 'item') {
-          destination = RunnerDeliveryTake(order: task, runnerId: widget.runnerId);
+          // DRIVE
+          if (type == 'ride') {
 
-        } else {
-          destination = ParcelDetailPage(order: task, runnerId: widget.runnerId);
+            destination = ActiveDriveTaskPage(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
+
+          // FOOD
+          else if (type == 'food') {
+
+            destination = ActiveFoodTaskPage(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
+
+          // GROCERY
+          else if (type == 'grocery') {
+
+            destination = RunnerGroceryDrop(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
+
+          //Item
+          else if(type == 'item') {
+
+            destination = RunnerDeliveryDrop(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+          }
+
+          //PARCEL
+           else{
+
+            destination = ActiveParcelTaskPage(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
+
+        }
+
+        // =========================
+        // MARKET TASK
+        // =========================
+
+        else {
+
+          if (type == 'ride') {
+
+            destination = DriveDetailPage(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
+
+          else if (type == 'food') {
+
+            destination = FoodDetailPage(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
+
+          else if (type == 'grocery') {
+
+            destination = RunnerGroceryOrder(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
+
+          else if (type == 'item') {
+
+            destination = RunnerDeliveryTake(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
+
+          else {
+
+            destination = ParcelDetailPage(
+              order: task,
+              runnerId: widget.runnerId,
+              client: widget.client,
+            );
+
+          }
         }
 
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => destination),
+          MaterialPageRoute(
+            builder: (context) => destination,
+          ),
         );
       },
       child: Container(

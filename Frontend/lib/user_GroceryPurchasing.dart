@@ -4,10 +4,12 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'user_GroceryConfirm.dart';
 import 'waiting_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class GroceryPurchasingScreen extends StatefulWidget {
   final String studentID; // 接收学号
-  const GroceryPurchasingScreen({super.key, required this.studentID});
+  final StreamChatClient client;
+  const GroceryPurchasingScreen({super.key, required this.studentID, required this.client});
 
   @override
   State<GroceryPurchasingScreen> createState() =>
@@ -134,10 +136,12 @@ double get _totalToCollect {
             context,
             MaterialPageRoute(
               builder: (context) => WaitingPage(
+                client: widget.client,
                 orderId: serverOrderId,
                 studentID: widget.studentID,
                 totalPrice: _totalToCollect,
                 targetPage: UserGroceryConfirm(
+                  client: widget.client,
                   orderId: serverOrderId,
                   studentID: widget.studentID,
                 ),

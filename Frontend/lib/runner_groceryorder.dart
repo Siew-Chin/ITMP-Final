@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'runner_grocerydrop.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class RunnerGroceryOrder extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
     const RunnerGroceryOrder({
     Key? key, 
     required this.order, 
-    required this.runnerId})
+    required this.runnerId,
+    required this.client})
       : super(key: key);
 
   @override
@@ -62,35 +65,74 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
 
   Future<void> _takeOrder() async {
     final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
+
     try {
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.order['order_id'],
-          "status_code": 1, 
+          "status_code": 1,
           "runner_id": widget.runnerId,
         }),
       );
 
-      debugPrint("Response Status: ${response.statusCode}");
-      debugPrint("Response Body: ${response.body}");
-
+      // 如果后端返回 400 或特定的错误码，说明订单状态已改变
       if (response.statusCode == 200) {
-        if (!mounted) return;
+        // 成功领单
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => RunnerGroceryDrop(
+              client: widget.client,
               order: detailedOrder ?? widget.order,
               runnerId: widget.runnerId,
             ),
           ),
         );
+      } else {
+        // 解析后端返回的消息，检查是否被取消
+        final data = jsonDecode(response.body);
+        
+        // 假设后端在订单被取消时返回 status_code: -1 或者特定的 message
+        if (data['current_status'] == -1 || response.statusCode == 400) {
+          _showCancelDialog();
+        }
       }
     } catch (e) {
-      debugPrint("Take Order Error: $e");
+      debugPrint("Error: $e");
     }
+  }
+
+  // 弹出取消提示框
+  void _showCancelDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 强制用户点击按钮
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red),
+            SizedBox(width: 10),
+            Text("Order Cancelled"),
+          ],
+        ),
+        content: const Text("Sorry, the user has already cancelled this order."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // close dialog
+              Navigator.pop(context); // back to runner page inside ServicePage
+            },
+            child: const Text(
+              "Back to Menu",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   double _parsePrice(dynamic value) {
@@ -352,7 +394,17 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
         minimumSize: const Size(double.infinity, 65),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
-      onPressed: isDetailsConfirmed ? _takeOrder : null,
+      onPressed: isDetailsConfirmed ? () async {
+        // 1. 先刷新数据
+        await _fetchOrderDetails();
+        // 2. 检查状态
+        if (detailedOrder?['status_code'] == -1) {
+          _showCancelDialog();
+        } else {
+          // 3. 没被取消，正常领单
+          _takeOrder();
+        }
+      } : null,
       child: const Text(
         "Take Order",
         style: TextStyle(

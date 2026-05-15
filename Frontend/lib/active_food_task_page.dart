@@ -4,14 +4,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'chat_page.dart'; 
 import 'runner_proof_photo_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ActiveFoodTaskPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
   const ActiveFoodTaskPage({
     Key? key,
     required this.order,
     required this.runnerId,
+    required this.client,
   }) : super(key: key);
 
   @override
@@ -64,6 +67,7 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
           builder: (context) => RunnerProofPhotoPage(
             orderId: widget.order['order_id'].toString(),
             runnerId: widget.runnerId,
+            client: widget.client,
           ),
         ),
       );
@@ -118,13 +122,28 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatPage(
-                studentID: widget.order['requester_id']?.toString() ?? "", 
-                runnerID: widget.runnerId,
-              )),
-            ),
+            onPressed: () {
+              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
+              final String targetId = liveOrder?['requester_id']?.toString() ?? 
+                                      widget.order['requester_id']?.toString() ?? 
+                                      '';
+
+              if (targetId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Error: Requester ID not found")),
+                );
+                return;
+              }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatPage(
+                  client: widget.client,
+                  currentUserId: widget.runnerId,
+                  otherUserId: targetId,
+                )),
+              );
+            },
           ),
         ],
         backgroundColor: Colors.transparent,
@@ -170,9 +189,9 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2F3A5A)),
                 ),
                 const SizedBox(height: 15),
-                _stepBtn("1. Food / Item Collected", 1, 2, const Color(0xFF6C8EF5)),
+                _stepBtn("1. Food Ordered", 1, 2, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 12),
-                _stepBtn("2. Arrived at Destination", 2, 3, const Color(0xFF6C8EF5)),
+                _stepBtn("2.  Food Delivering", 2, 3, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 12),
                 _stepBtn("3. Delivered & Proof", 3, 4, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 40),
@@ -204,12 +223,19 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
       children: [
         _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
-        _rowSummary("Dorm", liveOrder?['dropoff_point'] ?? "N/A"),
+
+        _rowSummary("Drop-off Point", liveOrder?['dropoff_point'] ?? "N/A"),
         const SizedBox(height: 8),
 
-        _rowSummary("Pick Up Stall / Shop", liveOrder?['stall_name'] ?? widget.order['shop_name'] ?? "N/A"),
+        _rowSummary("Pick Up Stall", liveOrder?['stall_name'] ?? widget.order['shop_name'] ?? "N/A"),
+        const SizedBox(height: 8),
+
+        _rowSummary("Food Name", liveOrder?['food_name'] ?? "N/A"),
+        const SizedBox(height: 8),
+
+        _rowSummary("Food Details", liveOrder?['food_details'] ?? "N/A"),
+
         const Divider(height: 20),
-        
         _rowSummary( 
           "Collect",
           "RM ${double.tryParse(

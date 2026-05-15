@@ -4,14 +4,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'chat_page.dart'; 
 import 'runner_proof_photo_page.dart';
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ActiveParcelTaskPage extends StatefulWidget {
   final dynamic order;
   final String runnerId;
+  final StreamChatClient client;
   const ActiveParcelTaskPage({
     Key? key,
     required this.order,
     required this.runnerId,
+    required this.client,
   }) : super(key: key);
 
   @override
@@ -58,6 +61,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
         builder: (context) => RunnerProofPhotoPage( // 你需要创建这个页面
           orderId: widget.order['order_id'].toString(),
           runnerId: widget.runnerId,
+          client: widget.client,
         ),
       ),
     );
@@ -101,13 +105,28 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ChatPage(
-                studentID: widget.order['requester_id'], // 拿到下单人 ID
-                runnerID: widget.runnerId,
-              )),
-            ),
+            onPressed: () {
+              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
+              final String targetId = liveOrder?['requester_id']?.toString() ?? 
+                                      widget.order['requester_id']?.toString() ?? 
+                                      '';
+
+              if (targetId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Error: Requester ID not found")),
+                );
+                return;
+              }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatPage(
+                  client: widget.client,
+                  currentUserId: widget.runnerId,
+                  otherUserId: targetId,
+                )),
+              );
+            },
           ),
         ],
         backgroundColor: Colors.transparent,
@@ -125,44 +144,47 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _summaryCard("Parcel"),
-                const SizedBox(height: 25),
-                const Text(
-                  "Note:",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.redAccent,
+          child: SingleChildScrollView( // 1. 添加滚动视图
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _summaryCard("Parcel"),
+                  const SizedBox(height: 25),
+                  const Text(
+                    "Note:",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.redAccent,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                _noteBox(
-                  "Please go to the dorm and take the student ID card to get the parcel.\n\nAfter drop the parcel, remember to collect money from customer.",
-                ),
-                const SizedBox(height: 35),
-                const Text(
-                  "Task Steps",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 15),
-                _stepBtn("1. ID Card Taken", 1, 2, Colors.green),
-                const SizedBox(height: 12),
-                _stepBtn("2. Parcel Taken", 2, 3, Colors.green),
-                const SizedBox(height: 12),
-                _stepBtn("3. Dropped (Finish)", 3, 4, Colors.green),
-                const Spacer(),
-                _escapeBtn(),
-                if (isLoading)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 10),
-                    child: Center(child: CircularProgressIndicator()),
+                  const SizedBox(height: 10),
+                  _noteBox(
+                    "Please go to the dorm and take the student ID card to get the parcel.\n\nAfter drop the parcel, remember to collect money from customer.",
                   ),
-              ],
+                  const SizedBox(height: 35),
+                  const Text(
+                    "Task Steps",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15),
+                  _stepBtn("1. ID Card Taken", 1, 2, Colors.green),
+                  const SizedBox(height: 12),
+                  _stepBtn("2. Parcel Taken", 2, 3, Colors.green),
+                  const SizedBox(height: 12),
+                  _stepBtn("3. Dropped (Finish)", 3, 4, Colors.green),
+                  const SizedBox(height: 40),
+                  _escapeBtn(),
+                  if (isLoading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 10),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -183,7 +205,11 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
       children: [
         _rowSummary("Customer", liveOrder?['customer_name'] ?? "Unknown"),
         const SizedBox(height: 8),
-        _rowSummary("Dorm", liveOrder?['dropoff_point'] ?? "N/A"),
+        _rowSummary("Contact", liveOrder?['requester_contact'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Dropoff Point", liveOrder?['dropoff_point'] ?? "N/A"),
+        const SizedBox(height: 8),
+        _rowSummary("Parcel Details", liveOrder?['parcel_details'] ?? "No details"),
         const SizedBox(height: 8),
         _rowSummary( 
           "Collect",
@@ -203,30 +229,37 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
     ),
   );
   Widget _rowSummary(
-  String l,
-  String v, {
-  Color valueColor = Colors.black,
-}) =>
-    Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          l,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 15,
-          ),
+    String l,
+    String v, {
+    Color valueColor = Colors.black,
+  }) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                v,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: valueColor,
+                ),
+              ),
+            ),
+          ],
         ),
-        Text(
-          v,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: valueColor,
-          ),
-        ),
-      ],
-    );
+      );
   Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(

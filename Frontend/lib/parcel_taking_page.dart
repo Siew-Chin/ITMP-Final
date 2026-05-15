@@ -4,11 +4,14 @@ import 'dart:convert';
 import 'waiting_page.dart';
 import 'parcel_tracking_page.dart'; 
 import 'package:http/http.dart' as http;
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class ParcelTakingPage extends StatefulWidget {
   final String studentID;
+  final StreamChatClient client;
   const ParcelTakingPage({
-    super.key,required this.studentID
+    super.key,required this.studentID, 
+    required this.client
     });
 
   @override
@@ -18,8 +21,16 @@ class ParcelTakingPage extends StatefulWidget {
 class _ParcelTakingPageState extends State<ParcelTakingPage> {
   int parcel_qty = 1;
   final TextEditingController _dropOffController = TextEditingController();
+  final TextEditingController _parcelDetailsController = TextEditingController();
   bool _isDorm = false;
   bool _isUrgent = false;
+
+  @override
+  void dispose() {
+    _dropOffController.dispose();
+    _parcelDetailsController.dispose();
+    super.dispose();
+  }
 
   // --- 核心计算逻辑 ---
   double get _totalPrice {
@@ -150,6 +161,40 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 25),
 
+            const Text(
+              "Parcel Details",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _parcelDetailsController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.only(bottom: 70),
+                    child: Icon(Icons.description_outlined, color: Colors.blueGrey),
+                  ),
+                  hintText: "e.g. 2 Shopee parcels, 1 fragile box",
+                  contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 12),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
             // 3. Urgent 勾选项
             Container(
               decoration: BoxDecoration(
@@ -262,6 +307,7 @@ Align(
         "item_price": 0.0,
         "runner_profit": _totalPrice, 
         "total_to_collect": _totalPrice,
+        "parcel_details": _parcelDetailsController.text.trim(),
       }),
     ).timeout(const Duration(seconds: 10));
 
@@ -282,7 +328,9 @@ Align(
               orderId: serverOrderId,
               studentID: widget.studentID,
               totalPrice: _totalPrice,
+              client: widget.client,
               targetPage: ParcelTrackingPage(
+                client: widget.client,
                 orderId: serverOrderId,
                 studentID: widget.studentID,
                 totalPrice: _totalPrice,
