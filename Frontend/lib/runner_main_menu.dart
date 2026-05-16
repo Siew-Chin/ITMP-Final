@@ -89,23 +89,49 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        // 修复：studentID 改为 runnerId (根据你的类定义)
-        title: Text('Runner: ${widget.runnerId}'),
-        backgroundColor: Colors.blue[200],
-        elevation: 0,
-        foregroundColor: Colors.black87,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Logout',
-          ),
-        ],
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight, 
+            colors:[
+            Color(0xFFEAF3FF),
+            Color(0xFFD6E8FF),
+            Color(0xFFBFD9FF),
+          ],
+        ),
       ),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children:[
+            // --- Top Header ---
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children:[
+                  Text(
+                    'Runner: ${widget.runnerId}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.logout),
+                    onPressed: _handleLogout,
+                  ),
+                ],
+              ),
+            ),
+
       // 使用 Caryn 的 CustomScrollView 作为主结构，这样可以滚动且支持下拉刷新
-      body: RefreshIndicator(
+      Expanded(
+      child: RefreshIndicator(
         onRefresh: _fetchDashboardData,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -117,15 +143,16 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // --- Earnings Card ---
                     _buildEarningsCard(),
                     const SizedBox(height: 20),
+                    // --- Current Active Tasks Header ---
                     _buildSectionHeader("Current Active Tasks", currentTasks.length),
                   ],
                 ),
               ),
             ),
 
-            // 3. 渲染你手头正在做的任务 (Active Tasks)
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) => Padding(
@@ -171,16 +198,22 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                   child: Text(
                     "Swipe down to refresh orders",
                     style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
-                  ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
+  // --- Earnings Card ---
   Widget _buildEarningsCard() {
     return Container(
       width: double.infinity,
@@ -217,7 +250,8 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
       ),
     );
   }
-
+  
+  // --- Section Header ---
   Widget _buildSectionHeader(String title, int count) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -244,6 +278,7 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     );
   }
 
+  // --- Task Card ---
   Widget _buildTaskCard(Map task, {bool isActive = false}) {
     // 1. Determine Icon based on type
     IconData iconData;

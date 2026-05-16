@@ -19,10 +19,10 @@ class ActiveDriveTaskPage extends StatefulWidget {
 }
 
 class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
-  int currentStatus = 1;
-  bool isLoading = false;
-  Map<String, dynamic>? liveOrder; // 存储实时数据
-  bool isPageLoading = true;
+  int currentStatus = 1; // track current order status step
+  bool isLoading = false; // loading indicator for status update
+  Map<String, dynamic>? liveOrder; // store real-time order data
+  bool isPageLoading = true; // initial page loading state
 
   @override
   void initState() {
@@ -49,63 +49,62 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
   }
 }
 
-  Future<void> _updateStatus(int nextS) async {
+//Update order status and navigator to payment confirmation page 
+Future<void> _updateStatus(int nextS) async {
 
-    if (nextS == 4) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RunnerPaymentConfirmPage( // 你需要创建这个页面
-          // 1. 将 runnerId 传给 studentID (用于 ServicePage 跳转)
-            studentID: widget.runnerId,
-            orderId: widget.order['order_id'].toString(),
-            // 2. 提取 delivery_fee 并转换为 double 类型
-            amount: double.tryParse(widget.order['delivery_fee'].toString()) ?? 0.0,
-            // 3. 提取客户相关信息
-            customerName: widget.order['customer_name'] ?? "User",
-            customerStudentID: widget.order['requester_id']?.toString() ?? "N/A",
-            customerContact: widget.order['requester_contact']?.toString() ?? "N/A",
-          ),
+  if (nextS == 4) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => RunnerPaymentConfirmPage( 
+        studentID: widget.runnerId,
+        orderId: widget.order['order_id'].toString(),
+        amount: double.tryParse(widget.order['delivery_fee'].toString()) ?? 0.0,
+        customerName: widget.order['customer_name'] ?? "User",
+        customerStudentID: widget.order['requester_id']?.toString() ?? "N/A",
+        customerContact: widget.order['requester_contact']?.toString() ?? "N/A",
       ),
+    ),
+  );
+  return;
+  }
+
+  setState(() => isLoading = true);
+  final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
+  try {
+    final res = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "order_id": widget.order['order_id'],
+        "status_code": nextS,
+        "runner_id": widget.runnerId,
+      }),
     );
-    return;
-  }
-
-    setState(() => isLoading = true);
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
-    try {
-      final res = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "order_id": widget.order['order_id'],
-          "status_code": nextS,
-          "runner_id": widget.runnerId,
-        }),
-      );
-      if (res.statusCode == 200) {
-        setState(() {
-          currentStatus = nextS;
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() => isLoading = false);
-      debugPrint("Update Error: $e");
+    if (res.statusCode == 200) {
+      setState(() {
+        currentStatus = nextS;
+        isLoading = false;
+      });
     }
+  } catch (e) {
+    setState(() => isLoading = false);
+    debugPrint("Update Error: $e");
   }
-
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
+      // --- AppBar ---
       appBar: AppBar(
         title: const Text(
           "Ride Progress",
-          style: TextStyle(color: Colors.black87),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
+        // --- Chat Button in AppBar ---
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
@@ -122,6 +121,8 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
+
+      // --- Background ----
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -129,7 +130,11 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFD6E8FF), 
+              Color(0xFFBFD9FF)
+            ],
           ),
         ),
         child: SafeArea(
@@ -138,8 +143,10 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // --- Order SUmmary Card ---
                 _summaryCard("Ride"),
                 const SizedBox(height: 25),
+                // --- Note Box ---
                 const Text(
                   "Note:",
                   style: TextStyle(
@@ -174,7 +181,9 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
                 const SizedBox(height: 12),
                 _stepBtn("3. Finish Ride", 3, 4, const Color(0xFF4A90E2)),
                 const Spacer(),
+                // --- Exit Button ---
                 _escapeBtn(),
+                // --- Loading Indicator ---
                 if (isLoading)
                   const Padding(
                     padding: EdgeInsets.only(top: 10),
@@ -188,6 +197,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
     );
   }
 
+  // --- UI ---
   Widget _summaryCard(String type) => Container(
     padding: const EdgeInsets.all(25),
     decoration: BoxDecoration(
@@ -208,25 +218,26 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
         _rowSummary( 
           "Collect",
           "RM ${double.tryParse(
-              liveOrder?['total_to_collect'].toString() ?? '0'
-            )?.toStringAsFixed(2) ?? '0.00'}",
-            valueColor: Colors.green,
+            liveOrder?['total_to_collect'].toString() ?? '0'
+          )?.toStringAsFixed(2) ?? '0.00'}",
+          valueColor: Colors.green,
         ), 
         _rowSummary(
           "Profit",
           "RM ${double.tryParse(
-              liveOrder?['runner_profit'].toString() ?? '0'
-            )?.toStringAsFixed(2) ?? '0.00'}",
-            valueColor: Colors.blue,
+            liveOrder?['runner_profit'].toString() ?? '0'
+          )?.toStringAsFixed(2) ?? '0.00'}",
+          valueColor: Colors.blue,
         ),
       ],
     ),
   );
+  // --- Reusable UI components ---
   Widget _rowSummary(
   String l,
   String v, {
   Color valueColor = Colors.black,
-}) =>
+  }) =>
     Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -247,6 +258,8 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
         ),
       ],
     );
+
+  // --- Note Box and Step Button ---
   Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
@@ -264,6 +277,8 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
       ),
     ),
   );
+
+  // --- Step Button UI ---
   Widget _stepBtn(String l, int a, int t, Color c) {
     bool done = currentStatus > a;
     bool active = currentStatus == a;
@@ -287,6 +302,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
     );
   }
 
+  // --- Exit Button ---
   Widget _escapeBtn() => TextButton.icon(
     onPressed: () => Navigator.pop(context),
     icon: const Icon(Icons.exit_to_app, color: Colors.black54),

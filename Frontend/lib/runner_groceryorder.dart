@@ -138,7 +138,11 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFD6E8FF), 
+              Color(0xFFBFD9FF)
+            ],
           ),
         ),
         child: SafeArea(
@@ -284,7 +288,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     );
   }
 
-  // --- UI 组件保持不变 ---
+  // --- Note Box ---
    Widget _noteBox(double collectAmount, double itemPrice) {
   return Container(
     padding: const EdgeInsets.all(15),
@@ -308,6 +312,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
   );
 }
 
+  // --- Reusable Row Widget ---
   Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -323,6 +328,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     );
   }
 
+  // --- Confirmation Checkbox ---
   Widget _checkboxArea() {
     return Container(
       decoration: BoxDecoration(
@@ -343,6 +349,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     );
   }
 
+  // --- Price Card ---
   Widget _btn() {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(

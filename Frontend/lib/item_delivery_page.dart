@@ -139,21 +139,40 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), 
+      extendBodyBehindAppBar: true,
+      //Top Header
       appBar: AppBar(
         title: const Text(
-          'Item Delivering', // 标题
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+          'Item Delivery', 
+          style: TextStyle(
+            fontWeight: FontWeight.bold, 
+            color: Colors.black87
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight, 
+            colors:[
+            Color(0xFFEAF3FF),
+            Color(0xFFD6E8FF),
+            Color(0xFFBFD9FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // 1. 数量选择区域
             const Text(
               "How many item you want to deliver?",
@@ -327,11 +346,13 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
               ),
             ),
             const SizedBox(height: 20),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      )   
+    )
+  );
+}
     Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),

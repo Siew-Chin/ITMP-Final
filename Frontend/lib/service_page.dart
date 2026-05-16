@@ -50,12 +50,6 @@ class _ServicePageState extends State<ServicePage> {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.menu_rounded,
-                color: Color(0xFF6C8EF5),
-                size: 28,
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   "Hey ${widget.studentID} 👋",
@@ -114,7 +108,7 @@ class _ServicePageState extends State<ServicePage> {
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => food.FoodDeliveringPage(studentID: widget.studentID))),
               ),
               _serviceCard(
-                title: "Pick-up&Drop-off",
+                title: "Campus Ride Service",
                 imagePath: "assets/pickupndropoff_image.png",
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FoodDeliveringPage(studentID: widget.studentID))),
               ),

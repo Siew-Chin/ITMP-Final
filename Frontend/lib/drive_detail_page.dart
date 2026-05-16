@@ -114,10 +114,13 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
         
     return Scaffold(
       extendBodyBehindAppBar: true,
+      // --- AppBar ---
       appBar: AppBar(
         backgroundColor: Colors.transparent, 
         elevation: 0, 
-        iconTheme: const IconThemeData(color: Colors.black87),),
+        iconTheme: const IconThemeData(color: Colors.black87),
+      ),
+      // --- Background ---
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -125,9 +128,14 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFD6E8FF), 
+              Color(0xFFBFD9FF)
+            ],
           ),
         ),
+        // --- Main Content Area ---
         child: SafeArea(
           bottom: false, // Fix: Allow gradient to bleed into the bottom navigation area
           child: isLoading 
@@ -207,8 +215,8 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
                         ),
                       ),
                       const Divider(height: 30, color: Colors.black12),
+                      
                       // --- Pricing Section ---
-
                       _row(
                         Icons.attach_money,
                         "Your Profit",
@@ -241,7 +249,8 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
                 ),
                 const SizedBox(height: 40),
                 _btn(),
-                const SizedBox(height: 40), // Bottom padding for clean look
+                const SizedBox(height: 40), 
+                // Bottom padding for clean look
               ],
             ),
           ),
@@ -250,7 +259,8 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
     );
   }
 
-   Widget _noteBox(double collectAmount) {
+  // --- Reusable UI components ---
+  Widget _noteBox(double collectAmount) {
   return Container(
     padding: const EdgeInsets.all(15),
     decoration: BoxDecoration(
@@ -271,6 +281,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
   );
 }
 
+  // --- Row Summary UI ---
   Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -286,6 +297,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
     );
   }
 
+  // --- Checkbox Area UI ---
   Widget _checkboxArea() {
     return Container(
       decoration: BoxDecoration(
@@ -306,6 +318,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
     );
   }
 
+  // --- Take Order Button UI ---
   Widget _btn() {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(

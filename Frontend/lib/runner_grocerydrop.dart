@@ -155,7 +155,6 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
       );
     }
 
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(

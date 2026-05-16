@@ -8,7 +8,7 @@ class WaitingPage extends StatefulWidget {
   final String orderId;
   final String studentID;
   final double totalPrice;
-  final Widget targetPage; // 这个就是你在截图里定义的“第三列”页面
+  final Widget targetPage;
 
   const WaitingPage({
     super.key,
@@ -45,7 +45,6 @@ class _WaitingPageState extends State<WaitingPage> {
 
   Future<void> _checkOrderStatus() async {
     try {
-      // 使用 API 4 检查状态
       final response = await http.get(
         Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}'),
       );
@@ -82,7 +81,9 @@ class _WaitingPageState extends State<WaitingPage> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFEAF3FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFBFD9FF)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),

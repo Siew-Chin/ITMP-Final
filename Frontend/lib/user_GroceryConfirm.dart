@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'chat_page.dart';
-import 'user_proof_photo_page.dart'; // 导入 Timer 用于自动刷新
+import 'user_proof_photo_page.dart'; 
 
 class UserGroceryConfirm extends StatefulWidget {
   final String orderId;
@@ -21,18 +21,16 @@ class UserGroceryConfirm extends StatefulWidget {
 }
 
 class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
-  // 状态码 (1: Order Taken, 2: Grocery Ordered, 3: Grocery Delivering, 4: Order Dropped)
-  int _currentStatus = 0; 
-  String? _runnerId;
-  double? _totalToCollect; 
-  String? _proofImageUrl; 
-  Timer? _timer;
+  int _currentStatus = 0; // Order status code
+  String? _runnerId; // Runner ID for chat
+  double? _totalToCollect; // Total amount to collect from user
+  String? _proofImageUrl; // Proof photo URL from runner
+  Timer? _timer; // Timer for polling
 
   @override
   void initState() {
     super.initState();
-    _fetchOrderStatus();// 初始化查询
-    // 设置每 3 秒轮询一次 API 4
+    _fetchOrderStatus();
     _timer = Timer.periodic(
       const Duration(seconds: 3), 
       (t) => _fetchOrderStatus()
@@ -41,11 +39,10 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // 销毁页面时停止轮询
+    _timer?.cancel();
     super.dispose();
   }
 
-  // --- API 调用：获取实时进度 ---
   Future<void> _fetchOrderStatus() async {
     final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');
     try {
@@ -70,13 +67,14 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.blue[50],
+      // --- AppBar ---
       appBar: AppBar(
         title: const Text('Grocery Delivering', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+        // --- Chat Button ---
         actions: [
-          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
           if (_currentStatus > 0 && _runnerId != null) 
             IconButton(
               icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
@@ -94,6 +92,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
             ),
         ],
       ),
+      // --- Pull to Refresh ---
       body: RefreshIndicator(
         onRefresh: _fetchOrderStatus,
         child: SingleChildScrollView(
@@ -103,6 +102,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 10),
+              // --- Order ID Display ---
               Center(
                 child: Text(
                   "Order ID: ${widget.orderId}",
@@ -110,25 +110,25 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // 进度条
+              // --- Timeline Progress UI ---
               _buildOrderTimeline(),
 
               const SizedBox(height: 50),
-
-              // 价格卡片
+              // --- Total Price Card ---
               _buildPriceCard(),
 
               const SizedBox(height: 40),
+              // --- Price Reminder ---
               _buildPriceReminder(),
             ],
           ),
         ),
       ),
+      // --- Bottom Button for Proof Photo ---
       bottomNavigationBar: _buildBottomButton(),
     );
   }
-
+  // --- Price Card ---
   Widget _buildPriceCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -152,8 +152,8 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
+  // --- Bottom Button for Proof Photo ---
   Widget _buildBottomButton() {
-    // 只有状态为 4 且后端上传了照片才能点击 Continue
     bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
 
     return SafeArea(
@@ -180,7 +180,9 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           ),
           child: Text(
-            _currentStatus == 4 ? "Receive & View Proof" : "Grocery is on the way...",
+            _currentStatus == 4 
+            ? "Receive & View Proof" 
+            : "Grocery is on the way...",
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
@@ -188,6 +190,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
+  // --- Reminder box showing price info ---
   Widget _buildPriceReminder() {
     return Container(
       padding: const EdgeInsets.all(15),
@@ -201,7 +204,6 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              // 如果 _totalToCollect 还没出，就显示等待中
               _totalToCollect != null
                 ? 'Reminder: Total amount to pay is RM : ${_totalToCollect!.toStringAsFixed(2)}'
                 : 'Reminder: Waiting for Runner to confirm item price...',
@@ -213,14 +215,20 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
-  // --- 进度条构建组件 ---
+  // --- Order Timeline ---
   Widget _buildOrderTimeline() {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildStepDot(1), _buildStepLine(1), _buildStepDot(2), _buildStepLine(2), _buildStepDot(3), _buildStepLine(3), _buildStepDot(4),
+            _buildStepDot(1), 
+            _buildStepLine(1), 
+            _buildStepDot(2), 
+            _buildStepLine(2), 
+            _buildStepDot(3), 
+            _buildStepLine(3), 
+            _buildStepDot(4),
           ],
         ),
         const SizedBox(height: 12),
@@ -237,6 +245,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
+  // --- Step Circle Indicator ---
   Widget _buildStepDot(int step) {
     bool active = _currentStatus >= step;
     return Container(
@@ -246,11 +255,13 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
+  // --- Step Line Indicator ---
   Widget _buildStepLine(int step) {
     bool active = _currentStatus > step;
     return Expanded(child: Container(height: 3, color: active ? Colors.black87 : Colors.grey[300]));
   }
 
+  // --- Step Label ---
   Widget _buildStepLabel(String text, int step) {
     bool active = _currentStatus >= step;
     return SizedBox(

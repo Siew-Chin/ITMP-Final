@@ -14,7 +14,7 @@ from datetime import datetime
 import time
 import uuid
 from flask import Flask, send_from_directory
-from stream_chat import StreamChat
+#from stream_chat import StreamChat
 
 app = Flask(__name__)
 CORS(app)
@@ -39,7 +39,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 api_key = "659pk8bnxecv"
 api_secret = "774u3vyq8sxqddhgjhgywqpftb8pc5xnq83dqrrdbknyf7wsd8yj3kta55f9r2b4"
 
-client = StreamChat(api_key, api_secret)
+#client = StreamChat(api_key, api_secret)
 
 def generate_token(user_id):
     return client.create_token(user_id)

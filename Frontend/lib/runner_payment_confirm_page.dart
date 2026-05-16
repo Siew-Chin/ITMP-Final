@@ -103,7 +103,6 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Error: $e")),
     );
-    // 如果失败了，把滑动条重置，允许用户重试
     setState(() {
       isSubmitting = false;
       swipeValue = 0.0;
@@ -117,7 +116,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
-      //Background 
+      // --- Background ---
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -137,7 +136,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
           child: Column(
             children: [
             const SizedBox(height: 30),
-            //Payment card
+            // --- Payment card ---
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -211,10 +210,9 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
                       ],
                     ),
                   const SizedBox(height:24),
-
                   _infoRow(Icons.person_outline, "Customer", liveCustomerName ?? widget.customerName),
-                    const SizedBox(height: 14),
-                    _infoRow(Icons.phone_outlined, "Contact", liveCustomerContact ?? widget.customerContact),
+                  const SizedBox(height: 14),
+                  _infoRow(Icons.phone_outlined, "Contact", liveCustomerContact ?? widget.customerContact),
                 ],
               ),
             ),
@@ -232,7 +230,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
             ),
             const SizedBox(height:10),
 
-            //Swipe bar
+            //--- Swipe bar ---
             Container(
               height: 68,
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -287,6 +285,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
 }
 }
 
+// --- Order Summary Card ---
 Widget _infoRow(IconData icon, String title, String value){
   return Row(
     children: [
