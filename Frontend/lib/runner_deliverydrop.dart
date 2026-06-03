@@ -1,4 +1,4 @@
-//22
+//26
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -38,7 +38,7 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
   Future<void> _refreshData() async {
   try {
     final res = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),
+      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
     );
     if (res.statusCode == 200) {
       setState(() {
@@ -62,13 +62,22 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
   Future<void> _updateStatus(int nextS) async {
     // 如果是最后一步（送达并上传凭证）
     if (nextS == 4) {
-      _showAmountConfirmDialog(); // 弹出金额确认框
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RunnerProofPhotoPage(
+            orderId: widget.order['order_id'].toString(),
+            runnerId: widget.runnerId,
+            client: widget.client, // 你可以在拍照页也记录这个值
+          ),
+        ),
+      );
       return;
     }
 
     // 前面的步骤保持不变
     setState(() => isLoading = true);
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status'); //API 5: Update Status
     try {
       final res = await http.post(
         url,
@@ -194,71 +203,6 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  void _showAmountConfirmDialog() {
-    final TextEditingController amountController = TextEditingController();
-    // 默认填入后端计算的理论金额，Runner 可以修改
-    amountController.text = _parsePrice(liveOrder?['total_to_collect'] ?? widget.order['total_to_collect']).toStringAsFixed(2);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false, // 强制用户必须操作
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Confirm Collection"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Please enter the actual total amount collected from customer (Cash):"),
-            const SizedBox(height: 15),
-            TextField(
-              controller: amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                prefixText: "RM ",
-                hintText: "0.00",
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6C8EF5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-            onPressed: () {
-              double enteredAmount = double.tryParse(amountController.text) ?? 0.0;
-              if (enteredAmount <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please enter a valid amount!")),
-                );
-                return;
-              }
-              
-              // 金额有效，关闭弹窗并跳转到拍照页面
-              Navigator.pop(context); 
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => RunnerProofPhotoPage(
-                    orderId: widget.order['order_id'].toString(),
-                    runnerId: widget.runnerId,
-                    client: widget.client, // 你可以在拍照页也记录这个值
-                  ),
-                ),
-              );
-            },
-            child: const Text("Confirm & Photo", style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }

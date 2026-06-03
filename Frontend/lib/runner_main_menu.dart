@@ -1,3 +1,4 @@
+//5
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -54,17 +55,17 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
 
   Future<void> _fetchDashboardData() async {
     try {
-      // API 19: Earnings
+      // API 19: calculate Earnings
       final earnRes = await http.get(
         Uri.parse(
           'http://10.0.2.2:5000/api/runner/earnings?runner_id=${widget.runnerId}',
         ),
       );
-      // API 17: Market
+      // API 17: Runner menu get orders
       final marketRes = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/runner/market'),
+        Uri.parse('http://10.0.2.2:5000/api/runner/market?runner_id=${widget.runnerId}'),
       );
-      // API 18: Current active tasks
+      // API 18: Runner's Active Tasks
       final currentRes = await http.get(
         Uri.parse(
           'http://10.0.2.2:5000/api/runner/tasks?runner_id=${widget.runnerId}',
@@ -276,6 +277,9 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
       iconData = Icons.local_shipping_rounded;
       iconColor = Colors.blueAccent;
     }
+
+    String orderTime = task['created_at'] ?? '';
+
     return GestureDetector(
       onTap: () {
 
@@ -460,6 +464,13 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (orderTime.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      orderTime,
+                      style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                    ),
+                  ],
                 ],
               ),
             ),

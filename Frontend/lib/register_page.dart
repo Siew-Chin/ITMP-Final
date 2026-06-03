@@ -1,15 +1,12 @@
+//2
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'service_page.dart';
-import 'package:flutter/foundation.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 import 'dart:io'; 
 import 'package:image_picker/image_picker.dart';
 
-final baseUrl = kIsWeb
-    ? 'http://127.0.0.1:5000' // Chrome
-    : 'http://10.0.2.2:5000'; // Emulator
 
 // Register page
 class Register extends StatefulWidget {
@@ -65,7 +62,7 @@ class RegisterState extends State<Register> {
     }
 
     setState(() => _isLoading = true);
-    final url = Uri.parse('$baseUrl/register');
+    final url = Uri.parse('http://10.0.2.2:5000/api/register');//API 1: register
 
     try {
       var request = http.MultipartRequest('POST', url);
@@ -75,8 +72,6 @@ class RegisterState extends State<Register> {
       request.fields['password'] = password;
       request.fields['contact'] = contactNumber;
       request.fields['dorm'] = dorm;
-
-      // 添加图片
       request.files.add(await http.MultipartFile.fromPath(
         'profile_image', 
         _selectedImage!.path,

@@ -1,4 +1,4 @@
-//10
+//23
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -87,7 +87,7 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/item/create'),
+        Uri.parse('http://10.0.2.2:5000/api/item/create'),//API 16: Create Item Order
         headers: {"Content-Type": "application/json"},
         body: json.encode({
           "requester_id": widget.studentID,

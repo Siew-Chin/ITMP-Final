@@ -1,15 +1,10 @@
+//1
 import 'package:flutter/material.dart';
 import 'register_page.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
 import 'service_page.dart'; 
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
-
-final baseUrl = kIsWeb
-    ? 'http://127.0.0.1:5000'   // Chrome
-    : 'http://10.0.2.2:5000';   // Emulator
-
 
 // Login Page
 class Login extends StatefulWidget {
@@ -40,8 +35,8 @@ class LoginState extends State<Login> {
       return;
     }
 
-    // 后端 Flask 地址 (Android 模拟器使用 10.0.2.2)
-    final url = Uri.parse('http://10.0.2.2:5000/login');
+    
+    final url = Uri.parse('http://10.0.2.2:5000/api/login');//API 2: login
 
     try {
       final response = await http.post(

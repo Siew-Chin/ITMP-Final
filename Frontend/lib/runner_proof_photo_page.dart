@@ -1,4 +1,4 @@
-//26
+//30
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -62,7 +62,7 @@ class _RunnerProofPhotoPageState extends State<RunnerProofPhotoPage>{
   try {
     var request = http.MultipartRequest(
       'POST', 
-      Uri.parse('http://10.0.2.2:5000/api/order/upload_proof')
+      Uri.parse('http://10.0.2.2:5000/api/order/upload_proof')//API 6: Upload Proof Photo and status update to 4
     );
 
     // 2. 添加文字字段
@@ -90,7 +90,7 @@ class _RunnerProofPhotoPageState extends State<RunnerProofPhotoPage>{
   // GET ORDER SUMMARY
   final summaryResponse = await http.get(
     Uri.parse(
-      'http://10.0.2.2:5000/api/order/summary?order_id=${widget.orderId}'
+      'http://10.0.2.2:5000/api/order/summary?order_id=${widget.orderId}'//API 10: Order Summary
     ),
   );
 

@@ -1,4 +1,4 @@
-//7
+//16
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -29,6 +29,7 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
   int _currentStatus = 0; 
   String? _runnerId; // 司机 ID
   Timer? _timer;
+  
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
 
   // --- API 调用：获取实时进度 ---
   Future<void> _fetchRideStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {

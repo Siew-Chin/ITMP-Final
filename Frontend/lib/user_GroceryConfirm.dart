@@ -1,4 +1,4 @@
-//9
+//20
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -50,7 +50,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
 
   // --- API 调用：获取实时进度 ---
   Future<void> _fetchOrderStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {

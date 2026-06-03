@@ -1,9 +1,9 @@
+//34
 import 'package:flutter/material.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-//Chat page
 class ChatPage extends StatefulWidget {
   final StreamChatClient client;
   final String currentUserId;
@@ -60,7 +60,7 @@ class _ChatPageState extends State<ChatPage> {
     if (chatClient.state.currentUser == null) {
       print(" Step 5: Getting token and sync data from backend");
       final response = await http.get(
-        Uri.parse("http://10.0.2.2:5000/get_token/${widget.currentUserId}"),
+        Uri.parse("http://10.0.2.2:5000/api/get_token/${widget.currentUserId}"),//API 8: Generate Stream Chat Token
       );
 
       if (response.statusCode != 200) throw Exception("Token API failed");

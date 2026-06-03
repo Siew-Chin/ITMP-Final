@@ -1,3 +1,4 @@
+//6
 import 'package:flutter/material.dart';
 import 'edit_profile_page.dart';
 import 'dart:convert';
@@ -71,8 +72,8 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       // 仅请求用户信息和收益，删除了反馈请求
       final results = await Future.wait([
-        http.get(Uri.parse('http://10.0.2.2:5000/api/user/get_info/${widget.studentID}')),
-        http.get(Uri.parse('http://10.0.2.2:5000/api/runner/earnings?runner_id=${widget.studentID}')),
+        http.get(Uri.parse('http://10.0.2.2:5000/api/user/get_info/${widget.studentID}')),//API 23 Get user new info 
+        http.get(Uri.parse('http://10.0.2.2:5000/api/runner/earnings?runner_id=${widget.studentID}')),//API 19: calculate Earnings
       ]).timeout(const Duration(seconds: 10));
 
       if (!mounted) return;

@@ -1,3 +1,4 @@
+//31
 import 'package:flutter/material.dart';
 import 'service_page.dart';
 import 'dart:convert';
@@ -46,9 +47,8 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
 
   Future<void> _fetchLatestOrderSummary() async {
     try {
-      // 使用你后端的 API 8
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/order/summary?order_id=${widget.orderId}'),
+        Uri.parse('http://10.0.2.2:5000/api/order/summary?order_id=${widget.orderId}'),//API 10: Order Summary
       );
 
       if (response.statusCode == 200) {
@@ -74,15 +74,14 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
   
   Future<void> confirmMoneyCollected() async {
   try {
-    // 指向 API 5: update_status
     final response = await http.post(
-      Uri.parse('http://10.0.2.2:5000/api/order/update_status'),
+      Uri.parse('http://10.0.2.2:5000/api/order/update_status'),//API 5: Update Status 
       headers: {
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
         "order_id": widget.orderId,
-        "status_code": 4, // 关键：传 4 会触发后端 API 5 里的收益计算逻辑
+        "status_code": 4, 
         "runner_id": widget.studentID,
       }),
     ).timeout(const Duration(seconds: 10));

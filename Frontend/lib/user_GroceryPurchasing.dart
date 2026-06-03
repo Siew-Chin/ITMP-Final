@@ -1,4 +1,4 @@
-//8
+//19
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http; 
 import 'dart:convert';
@@ -45,7 +45,7 @@ class _GroceryPurchasingScreenState extends State<GroceryPurchasingScreen> {
   // --- API 逻辑 ---
   Future<void> _fetchShops() async {
     try {
-      final response = await http.get(Uri.parse('http://10.0.2.2:5000/api/grocery/shops'));
+      final response = await http.get(Uri.parse('http://10.0.2.2:5000/api/grocery/shops'));//API 14: Get Shop List 
       if (response.statusCode == 200) {
         print("Raw Response: ${response.body}");
         final decodedData = json.decode(response.body);
@@ -105,7 +105,7 @@ double get _totalToCollect {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/grocery/create'),
+        Uri.parse('http://10.0.2.2:5000/api/grocery/create'),//API 15: Creat Grocery Order
         headers: {"Content-Type": "application/json"},
         body: json.encode({
           "requester_id": widget.studentID,

@@ -1,3 +1,4 @@
+//32
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -29,7 +30,7 @@ class _RunnerEarningHistoryPageState extends State<RunnerEarningHistoryPage> {
   Future<void> loadEarningHistory() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/runner/earning_history?runner_id=${widget.runnerId}'),
+        Uri.parse('http://10.0.2.2:5000/api/runner/earning_history?runner_id=${widget.runnerId}'),//API 24: Runner earning history
       );
 
       if (!mounted) return;

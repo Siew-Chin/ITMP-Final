@@ -1,4 +1,4 @@
-//13
+//9
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -41,7 +41,7 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
   Future<void> _fetchOrderDetails() async {
   try {
     final response = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),
+      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
     );
     if (!mounted) return;
     if (response.statusCode == 200) {
@@ -64,7 +64,7 @@ bool _isSubmitting = false;
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/order/update_status'),
+        Uri.parse('http://10.0.2.2:5000/api/order/update_status'),//API 5: Update Status 
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.order['order_id'],

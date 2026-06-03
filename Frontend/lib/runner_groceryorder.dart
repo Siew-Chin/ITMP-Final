@@ -1,4 +1,4 @@
-//19
+//21
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -36,7 +36,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}',
+          'http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}',//API 20: runner side get order detail
         ),
       );
 
@@ -64,7 +64,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
   }
 
   Future<void> _takeOrder() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');//API 5: Update Status 
 
     try {
       final response = await http.post(

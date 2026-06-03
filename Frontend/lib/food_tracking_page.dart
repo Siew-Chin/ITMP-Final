@@ -1,4 +1,4 @@
-//5
+//12
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -48,7 +48,7 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
 
   // --- API 调用：获取实时进度 ---
   Future<void> _fetchFoodStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {

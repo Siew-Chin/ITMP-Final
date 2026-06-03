@@ -45,7 +45,7 @@ def generate_token(user_id):
     return stream_client.create_token(user_id)
 
 #API 1: register
-@app.route('/register', methods=['POST'])
+@app.route('/api/register', methods=['POST'])
 def register():
     try:
         # 1. 接收 form-data
@@ -71,7 +71,7 @@ def register():
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], profile_image_name)
                 file.save(file_path)
 
-        # 3. 构造用户对象（加入 profile_image）
+        # 3. 构造用户对象
         new_user = {
             "name": name,
             "student_id": student_id,
@@ -79,7 +79,6 @@ def register():
             "contact": contact,
             "dorm": dorm,
             "profile_image": profile_image_name, # 保存文件名
-            "role": "student",
             "total_earnings": 0.0,
             "created_at": datetime.utcnow()
         }
@@ -104,7 +103,7 @@ def register():
         return jsonify({"message": "Server error", "error": str(e)}), 500
     
 # API 2: login
-@app.route('/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
@@ -126,7 +125,6 @@ def login():
         # 3. 验证通过
         return jsonify({
             "message": "Login success",
-            "role": user.get('role', 'student'),
             "name": user.get('name', 'User')
         }), 200
 
@@ -193,7 +191,7 @@ def create_parcel_order():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-#API4:GetProgress
+#API4: GetProgress
 @app.route('/api/order/tracking/<order_id>', methods=['GET'])
 def get_order_tracking(order_id):
     order = db.order.find_one({"order_id": order_id})
@@ -227,6 +225,12 @@ def update_status():
         if order.get("is_cancelled") or int(order.get("status_code", 0)) == -1:
             return jsonify({"error": "Order has been cancelled"}), 400
 
+        # 不能接自己的单
+        if new_status_code == 1 and order.get("requester_id") == runner_id:
+            return jsonify({
+            "error": "You cannot take your own order"
+        }), 400
+        
         if new_status_code == 1 and int(order.get("status_code", 0)) != 0:
             return jsonify({"error": "Order is no longer available"}), 400
 
@@ -324,13 +328,13 @@ def upload_proof():
         print(f"ERROR: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
-# API 6-1: Serve Proof Photos
+# API 7: Serve Proof Photos
 @app.route('/static/proofs/<filename>')
 def serve_proof(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# API 6-2: Generate Stream Chat Token
-@app.route('/get_token/<user_id>', methods=['GET'])
+# API 8: Generate Stream Chat Token
+@app.route('/api/get_token/<user_id>', methods=['GET'])
 def get_token(user_id):
     try:
         # 1. 从数据库获取真实的用户资料
@@ -361,7 +365,7 @@ def get_token(user_id):
         print(f"STREAM ERROR: {e}")
         return jsonify({"error": str(e)}), 500
 
-# API 7: Submit Feedback
+# API 9: Submit Feedback
 @app.route('/api/order/feedback', methods=['POST'])
 def submit_feedback():
     try:
@@ -398,7 +402,7 @@ def submit_feedback():
         print(f"Feedback Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# API 8: Order Summary
+# API 10: Order Summary
 @app.route('/api/order/summary', methods=['GET'])
 def get_order_summary():
     try:
@@ -425,8 +429,7 @@ def get_order_summary():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-#API 10 & 11: Get Food Menu
+#API 11: Get Food Menu
 @app.route('/api/food/menu', methods=['GET'])
 def get_all_menu():
     try:
@@ -633,16 +636,13 @@ def create_item_order():
         if data.get("_isDropOffDorm")
         else data.get("dropoff_point")
     )
-
     new_order = {
         "order_id": order_id,
         "requester_id": data.get('requester_id'),
         "type": "Item",
         "parcel_qty": data.get('parcel_qty'),
-        "item_description": data.get('item_description'),
         "pickup_point": pickup_point,
         "dropoff_point": dropoff_point,
-        "notes": data.get('notes'),
         "item_details": data.get("item_details"),
         "item_price": float(data.get("item_price", 0)),
         "runner_profit": float(data.get("runner_profit", 0)),
@@ -657,23 +657,27 @@ def create_item_order():
 @app.route('/api/runner/market', methods=['GET'])
 def get_runner_market():
     try:
-        # 只展示 status_code 为 0 (待接单) 的任务
-        tasks = list(db.order.find({
-            "status_code": 0, 
-            "is_cancelled": {"$ne": True}}
-            ))
-        
+        runner_id = request.args.get("runner_id")
+
+        query = {
+            "status_code": 0,
+            "is_cancelled": {"$ne": True}
+        }
+
+        if runner_id:
+            query["requester_id"] = {"$ne": runner_id}
+
+        tasks = list(db.order.find(query).sort("created_at", -1))
+
         formatted_tasks = []
         for task in tasks:
-            task['_id'] = str(task['_id']) # 强制转字符串防止红屏
+            task['_id'] = str(task['_id'])
             
-            # 时间格式化处理
             if 'created_at' in task and isinstance(task['created_at'], datetime):
-                task['created_at'] = task['created_at'].isoformat()
+                task['created_at'] = task['created_at'].strftime("%Y-%m-%d %H:%M")
             else:
-                task['created_at'] = datetime.now().isoformat()
+                task['created_at'] = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-            # 确保费用有默认值
             task['runner_profit'] = float(task.get('runner_profit', 0))
             task['total_to_collect'] = float(task.get('total_to_collect', 0))
             task['is_urgent'] = task.get('is_urgent', False)
@@ -688,18 +692,38 @@ def get_runner_market():
 def parse_json(data):
     return json.loads(json_util.dumps(data))
 
-
 # API 18: Runner's Active Tasks
 @app.route('/api/runner/tasks', methods=['GET'])
 def get_runner_tasks():
-    runner_id = request.args.get('runner_id')
-    # Statuses 1 (Taken), 2 (Picking), 3 (Picked)
-    current = list(db.order.find({
-        "runner_id": runner_id, 
-        "status_code": {"$in": [1, 2, 3]},
-        "is_cancelled": {"$ne": True}
-    }))
-    return jsonify(parse_json(current)), 200
+    try: 
+        runner_id = request.args.get('runner_id')
+
+        current = list(db.order.find({
+            "runner_id": runner_id, 
+            "status_code": {"$in": [1, 2, 3]},
+            "is_cancelled": {"$ne": True}
+        }).sort("created_at", -1))
+        
+        formatted_current = []
+        for task in current:
+            task['_id'] = str(task['_id'])
+            
+            # 统一时间格式化处理
+            if 'created_at' in task and isinstance(task['created_at'], datetime):
+                task['created_at'] = task['created_at'].strftime("%Y-%m-%d %H:%M")
+            else:
+                task['created_at'] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                
+            task['runner_profit'] = float(task.get('runner_profit', 0))
+            task['total_to_collect'] = float(task.get('total_to_collect', 0))
+            task['is_urgent'] = task.get('is_urgent', False)
+            
+            formatted_current.append(task)
+
+        return jsonify(formatted_current), 200
+    except Exception as e:
+        print(f"Tasks Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # API 19: calculate Earnings
 @app.route('/api/runner/earnings', methods=['GET'])
@@ -774,7 +798,7 @@ def get_order_detail(order_id):
 
             "is_urgent": order.get("is_urgent", False),
 
-            "shopping_list": order.get("shopping_list") or order.get("item_description", "No details"),
+            "shopping_list": order.get("shopping_list"),
             "item_price": float(order.get("item_price", 0)),
             "runner_profit": float(order.get("runner_profit", 0)),
             "total_to_collect": float(order.get("total_to_collect", 0)),
@@ -785,82 +809,7 @@ def get_order_detail(order_id):
         print(f"Detail Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# API 21: Feedback Received (Runner side)
-@app.route('/api/feedback/received', methods=['GET'])
-def get_feedback_received():
-    try:
-        user_id = request.args.get("user_id") # 这里的 user_id 对应 runner_id
-
-        # 查询条件：runner_id 匹配，且 feedback 字段存在
-        query = {
-            "runner_id": user_id,
-            "feedback": {"$exists": True}
-        }
-        
-        # 在 orders 集合里找
-        orders = list(db.order.find(query).sort("feedback.submitted_at", -1))
-
-        result = []
-        for o in orders:
-            # 获取评价者（下单人）的信息
-            fb = o.get("feedback", {})
-            from_user = db.user_detail.find_one({"student_id": o.get("requester_id")})
-            submitted_at = fb.get("submitted_at")
-
-            result.append({
-                "service_type": o.get("type"), # 从订单获取类型
-                "rating": fb.get("rating"),
-                "from_username": from_user.get("name") if from_user else o.get("requester_id"),
-                "comment": fb.get("comment"),
-                "timestamp": (
-                    submitted_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if isinstance(submitted_at, datetime)
-                    else str(submitted_at) if submitted_at else ""
-                )
-            })
-
-        return jsonify(result), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# API 22: Feedback Sent (User side)
-@app.route('/api/feedback/sent', methods=['GET'])
-def get_feedback_sent():
-    try:
-        user_id = request.args.get("user_id") # 这里的 user_id 对应 requester_id
-        if not user_id:
-            return jsonify({"error": "user_id is required"}), 400
-
-        query = {
-            "requester_id": user_id,
-            "feedback": {"$exists": True}
-        }
-        
-        orders = list(db.order.find(query).sort("feedback.submitted_at", -1))
-
-        result = []
-        for o in orders:
-            fb = o.get("feedback", {})
-            submitted_at = fb.get("submitted_at")
-            # 获取被评价者（Runner）的信息
-            to_user = db.user_detail.find_one({"student_id": o.get("runner_id")})
-            
-            result.append({
-                "service_type": o.get("type"),
-                "rating": fb.get("rating"),
-                "to_username": to_user.get("name") if to_user else o.get("runner_id"),
-                "timestamp": (
-                    submitted_at.strftime("%Y-%m-%d %H:%M:%S") 
-                    if isinstance(submitted_at, datetime) 
-                    else str(submitted_at) if submitted_at else ""
-                )
-            })
-
-        return jsonify(result), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-#API 23: Update user profile
+#API 21: Update user profile
 @app.route('/api/user/update_info', methods=['POST'])
 def update_user_profile():
     try:
@@ -937,31 +886,7 @@ def update_user_profile():
     except Exception as e:
         return jsonify({"msg": "Server error", "error": str(e)}), 500
     
-
-# API 24: Get User Profile
-@app.route('/api/user/profile', methods=['GET'])
-def get_user_profile():
-    try:
-
-        student_id = request.args.get("student_id")
-
-        if not student_id:
-            return jsonify({"error": "Missing student_id"}), 400
-
-        user = users_col.find_one(
-            {"student_id": student_id},
-            {"_id": 0, "password": 0}
-        )
-
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-        return jsonify(user), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
-# API 25: Get order history
+# API 22: Get order history
 @app.route('/api/orders/history/<student_id>', methods=['GET'])
 def get_order_history(student_id):
     try:
@@ -1027,7 +952,7 @@ def get_order_history(student_id):
         print(f"History Error: {e}")
         return jsonify({"error": str(e)}), 500
     
-# API 26 (结合版): 获取用户详细资料
+# API 23 Get user new info 
 @app.route('/api/user/get_info/<student_id>', methods=['GET'])
 def get_user_info(student_id):
     try:
@@ -1051,7 +976,7 @@ def get_user_info(student_id):
         return jsonify({"message": "Server error", "error": str(e)}), 500
     
 
-# API 27: Runner earning history
+# API 24: Runner earning history
 @app.route('/api/runner/earning_history', methods=['GET'])
 def get_earning_history():
     runner_id = request.args.get('runner_id')
@@ -1098,7 +1023,7 @@ def get_earning_history():
         "tasks": tasks
     }), 200
 
-# API 28: Runner Rating Status
+# API 25: Runner Rating Status
 @app.route('/api/runner/rating_status', methods=['GET'])
 def get_runner_rating_status():
     try:
@@ -1144,7 +1069,7 @@ def get_runner_rating_status():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# API 29: User's Current Orders 
+# API 26: User's Current Orders 
 @app.route('/api/user/current_orders', methods=['GET'])
 def get_user_current_orders():
     try:
@@ -1168,6 +1093,13 @@ def get_user_current_orders():
                 runner = users_col.find_one({"student_id": runner_id})
                 runner_name = runner.get("name") if runner else runner_id
 
+            created_at = order.get("created_at")
+            time_str = "Unknown"
+            if isinstance(created_at, datetime):
+                time_str = created_at.strftime("%Y-%m-%d %H:%M")
+            elif created_at:
+                time_str = str(created_at)
+
             result.append({
                 "order_id": order.get("order_id"),
                 "type": order.get("type", "order"),
@@ -1175,6 +1107,7 @@ def get_user_current_orders():
                 "runner_id": runner_id,
                 "runner_name": runner_name,
                 "total_to_collect": order.get("total_to_collect", 0),
+                "created_at": time_str,
             })
 
         return jsonify(result), 200
@@ -1182,7 +1115,7 @@ def get_user_current_orders():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-#API 30: Cancel Order (only if not taken by runner yet)
+#API 27: Cancel Order (only if not taken by runner yet)
 @app.route('/api/order/cancel', methods=['POST'])
 def cancel_order():
     try:

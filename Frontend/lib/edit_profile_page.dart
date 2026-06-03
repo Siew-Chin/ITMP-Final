@@ -1,3 +1,4 @@
+//33
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -34,7 +35,7 @@ void initState() {
 
 Future<void> _fetchUserProfile() async {
   setState(() => _isLoading = true);
-  final url = Uri.parse('http://10.0.2.2:5000/api/user/get_info/${widget.studentID}');
+  final url = Uri.parse('http://10.0.2.2:5000/api/user/get_info/${widget.studentID}');//API 23 Get user new info 
   
   try {
     final response = await http.get(url);
@@ -86,7 +87,7 @@ Future<void> _fetchUserProfile() async {
 
   setState(() => _isLoading = true);
 
-  final url = Uri.parse('http://10.0.2.2:5000/api/user/update_info');
+  final url = Uri.parse('http://10.0.2.2:5000/api/user/update_info');//API 21: Update user profile
 
   try {
     var request = http.MultipartRequest('POST', url);

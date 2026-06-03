@@ -1,4 +1,4 @@
-//11
+//24
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -9,9 +9,9 @@ import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class TrackingDeliveryPage extends StatefulWidget {
   final String orderId;
-  final String studentID; // 必填：用于 Chat
-  final double totalPrice; // 初始价格
-  final StreamChatClient client; // 必填：用于 Chat
+  final String studentID; 
+  final double totalPrice; 
+  final StreamChatClient client; 
 
   const TrackingDeliveryPage({
     super.key, 
@@ -48,7 +48,7 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
 
   // --- API 调用：获取实时进度 ---
   Future<void> _fetchOrderStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
       final res = await http.get(url);
       if (res.statusCode == 200) {

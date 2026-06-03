@@ -1,4 +1,4 @@
-//4
+//11
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -47,7 +47,7 @@ class _FoodDeliveringPageState extends State<FoodDeliveringPage> {
   // --- API 逻辑 ---
   Future<void> _fetchMenu() async {
     try {
-      final response = await http.get(Uri.parse('http://10.0.2.2:5000/api/food/menu'));
+      final response = await http.get(Uri.parse('http://10.0.2.2:5000/api/food/menu')); //API 11: Get Food Menu
       if (response.statusCode == 200) {
         print("Raw Response: ${response.body}");
         final decodedData = json.decode(response.body);
@@ -132,7 +132,7 @@ double get _totalToCollect {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/food/create'),
+        Uri.parse('http://10.0.2.2:5000/api/food/create'), //API 12: Create Food Order 
         headers: {"Content-Type": "application/json"},
         body: json.encode({
           "requester_id": widget.studentID,

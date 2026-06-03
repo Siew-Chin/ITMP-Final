@@ -1,4 +1,4 @@
-//20
+//22
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -43,7 +43,7 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
   Future<void> _refreshData() async {
   try {
     final res = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),
+      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'), //API 20: runner side get order detail
     );
     if (res.statusCode == 200) {
       setState(() {
@@ -109,7 +109,7 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
       }
 
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/order/update_status'),
+        Uri.parse('http://10.0.2.2:5000/api/order/update_status'),//API 5: Update Status
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(bodyData),
       );

@@ -1,4 +1,4 @@
-//2
+//7
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'waiting_page.dart';
@@ -295,7 +295,7 @@ Align(
     try {
     print("DEBUG: Sending request to server...");
     final response = await http.post(
-      Uri.parse('http://10.0.2.2:5000/api/parcel/create'),
+      Uri.parse('http://10.0.2.2:5000/api/parcel/create'),//API 3: create parcel order
       headers: {"Content-Type": "application/json"},
       body: json.encode({
         "requester_id": widget.studentID,
@@ -344,18 +344,25 @@ Align(
     } else {
       print("SERVER ERROR STATUS: ${response.statusCode}");
     }
-  } catch (e) {
-    if (mounted) Navigator.pop(context);
-    print("CATCH ERROR: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Connection failed: $e")),
-    );
-  }
-},
-icon: const Icon(Icons.send),
-      label: const Text("Order Now"), 
-  ),
-),
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      print("CATCH ERROR: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Connection failed: $e")),
+      );
+    }
+  },
+            icon: const Icon(Icons.send_rounded),
+            label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  elevation: 5,
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
           ],
         ),

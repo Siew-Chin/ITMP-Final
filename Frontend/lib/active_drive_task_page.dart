@@ -38,7 +38,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
   Future<void> _refreshData() async {
   try {
     final res = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),
+      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
     );
     if (res.statusCode == 200) {
       setState(() {
@@ -53,31 +53,8 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
 }
 
   Future<void> _updateStatus(int nextS) async {
-
-    if (nextS == 4) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RunnerPaymentConfirmPage( // 你需要创建这个页面
-          // 1. 将 runnerId 传给 studentID (用于 ServicePage 跳转)
-            studentID: widget.runnerId,
-            orderId: widget.order['order_id'].toString(),
-            // 2. 提取 delivery_fee 并转换为 double 类型
-            amount: double.tryParse(widget.order['delivery_fee'].toString()) ?? 0.0,
-            // 3. 提取客户相关信息
-            customerName: widget.order['customer_name'] ?? "User",
-            // 修改第 84 行左右
-            customerStudentID: liveOrder?['requester_id']?.toString() ?? widget.order['requester_id']?.toString() ?? "N/A",
-            customerContact: widget.order['requester_contact']?.toString() ?? "N/A",
-            client: widget.client,
-          ),
-      ),
-    );
-    return;
-  }
-
     setState(() => isLoading = true);
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');
+    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status'); //API 5: Update Status
     try {
       final res = await http.post(
         url,
@@ -93,6 +70,28 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           currentStatus = nextS;
           isLoading = false;
         });
+
+        if (nextS == 4) {
+
+          if (!mounted) return; // 良好的 Flutter 异步习惯，防止 context 失效
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RunnerPaymentConfirmPage(
+                studentID: widget.runnerId,
+                orderId: widget.order['order_id'].toString(),
+                amount: double.tryParse(widget.order['delivery_fee'].toString()) ?? 0.0,
+                customerName: widget.order['customer_name'] ?? "User",
+                customerStudentID: liveOrder?['requester_id']?.toString() ?? widget.order['requester_id']?.toString() ?? "N/A",
+                customerContact: widget.order['requester_contact']?.toString() ?? "N/A",
+                client: widget.client,
+              ),
+            ),
+          );
+        } else {
+          setState(() => isLoading = false);
+          // 可以加个 SnackBar 提示更新失败
+        }
       }
     } catch (e) {
       setState(() => isLoading = false);
@@ -319,7 +318,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
     onPressed: () => Navigator.pop(context),
     icon: const Icon(Icons.exit_to_app, color: Colors.black54),
     label: const Text(
-      "Exit to Dashboard",
+      "Return to Marketplace",
       style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
     ),
   );

@@ -1,5 +1,5 @@
+//3
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 
 import 'profile_page.dart';
 import 'order_history_page.dart';
@@ -23,9 +23,6 @@ import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-final baseUrl = kIsWeb
-    ? 'http://127.0.0.1:5000'   // Chrome
-    : 'http://10.0.2.2:5000';   // Emulator
 
 //Service Page (after login/register)
 class ServicePage extends StatefulWidget {
@@ -69,7 +66,7 @@ class _ServicePageState extends State<ServicePage> {
   Future<void> _fetchUserInfo() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/user/get_info/${widget.studentID}'),
+        Uri.parse('http://10.0.2.2:5000/api/user/get_info/${widget.studentID}'),//API 23: Get user new info 
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -86,22 +83,22 @@ class _ServicePageState extends State<ServicePage> {
   }
 
   Future<List<dynamic>> _fetchCurrentOrders() async {
-  final response = await http.get(
-    Uri.parse('$baseUrl/api/user/current_orders?requester_id=${widget.studentID}'),
-  );
+    final response = await http.get(
+      Uri.parse('http://10.0.2.2:5000/api/user/current_orders?requester_id=${widget.studentID}'),//API 26: User Current Orders
+    );
 
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    return data is List ? data : [];
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data is List ? data : [];
+    }
+
+    return [];
   }
-
-  return [];
-}
 
   Future<bool> _checkRunnerAccess() async {
   try {
     final response = await http.get(
-      Uri.parse('$baseUrl/api/runner/rating_status?runner_id=${widget.studentID}'),
+      Uri.parse('http://10.0.2.2:5000/api/runner/rating_status?runner_id=${widget.studentID}'),//API 25: Runner Rating Status
     );
 
     if (response.statusCode != 200) {
@@ -280,6 +277,7 @@ class _ServicePageState extends State<ServicePage> {
                           itemBuilder: (context, index) {
                             final order = orders[index];
                             final statusCode = int.tryParse(order['status_code'].toString()) ?? 0;
+                            final orderTime = order['created_at'] ?? 'N/A';
 
                             return InkWell(
                               borderRadius: BorderRadius.circular(14),
@@ -293,9 +291,18 @@ class _ServicePageState extends State<ServicePage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      "Order Type: ${order['type'] ?? 'Order'}",
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Order Type: ${order['type'] ?? 'Order'}",
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        Text(
+                                          orderTime,
+                                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 6),
                                     Text("Status: ${_statusText(statusCode)}"),

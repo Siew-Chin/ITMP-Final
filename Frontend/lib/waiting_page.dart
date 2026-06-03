@@ -1,3 +1,4 @@
+//27
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
@@ -48,9 +49,8 @@ class _WaitingPageState extends State<WaitingPage> {
 
   Future<void> _checkOrderStatus() async {
     try {
-      // 使用 API 4 检查状态
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}'),
+        Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}'),//API4: GetProgress
       );
 
       if (response.statusCode == 200) {
@@ -80,7 +80,7 @@ class _WaitingPageState extends State<WaitingPage> {
   Future<void> _cancelOrder() async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/order/cancel'),
+        Uri.parse('http://10.0.2.2:5000/api/order/cancel'),//API 27: Cancel Order (only if not taken by runner yet)
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "order_id": widget.orderId,
