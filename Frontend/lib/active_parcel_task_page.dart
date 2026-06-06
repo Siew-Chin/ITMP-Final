@@ -22,10 +22,10 @@ class ActiveParcelTaskPage extends StatefulWidget {
 }
 
 class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
-  int currentStatus = 1;
-  bool isLoading = false;
-  Map<String, dynamic>? liveOrder; // 存储实时数据
-  bool isPageLoading = true;
+  int currentStatus = 1; // track current order status step
+  bool isLoading = false; // loading indicator for status update
+  Map<String, dynamic>? liveOrder; // store real-time order data
+  bool isPageLoading = true; // initial page loading state
 
   @override
   void initState() {
@@ -97,11 +97,13 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
+      // --- AppBar ---
       appBar: AppBar(
         title: const Text(
           "Parcel Progress",
-          style: TextStyle(color: Colors.black87),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
+        // --- Chat Button ---
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
@@ -133,6 +135,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
+      // --- Background ----
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -140,9 +143,14 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFD6E8FF), 
+              Color(0xFFBFD9FF)
+            ],
           ),
         ),
+        // --- Main Content ---
         child: SafeArea(
           child: SingleChildScrollView( // 1. 添加滚动视图
             physics: const BouncingScrollPhysics(),
@@ -151,8 +159,10 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // --- Order Summary Card ---
                   _summaryCard("Parcel"),
                   const SizedBox(height: 25),
+                  // --- Note Section ---
                   const Text(
                     "Note:",
                     style: TextStyle(
@@ -170,6 +180,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
                     "Task Steps",
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
+                  // --- Step Buttons ---
                   const SizedBox(height: 15),
                   _stepBtn("1. ID Card Taken", 1, 2, const Color(0xFF4A90E2)),
                   const SizedBox(height: 12),
@@ -177,7 +188,9 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
                   const SizedBox(height: 12),
                   _stepBtn("3. Dropped (Finish)", 3, 4, const Color(0xFF4A90E2)),
                   const SizedBox(height: 40),
+                  // --- Exit Button ---
                   _escapeBtn(),
+                  // --- Loading Indicator ---
                   if (isLoading)
                     const Padding(
                       padding: EdgeInsets.only(top: 10),
@@ -191,7 +204,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
       ),
     );
   }
-
+  // --- Summary Card UI ---
   Widget _summaryCard(String type) => Container(
     padding: const EdgeInsets.all(25),
     decoration: BoxDecoration(
@@ -228,6 +241,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
       ],
     ),
   );
+  // --- Row Summary UI ---
   Widget _rowSummary(
     String l,
     String v, {
@@ -260,6 +274,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
           ],
         ),
       );
+  // --- Note Box UI ---
   Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
@@ -277,6 +292,8 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
       ),
     ),
   );
+
+  // --- Step Button UI ---
   Widget _stepBtn(String l, int a, int t, Color c) {
     bool done = currentStatus > a;
     bool active = currentStatus == a;
@@ -299,7 +316,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
       ),
     );
   }
-
+   // --- Exit Button UI ---
   Widget _escapeBtn() => TextButton.icon(
     onPressed: () => Navigator.pop(context),
     icon: const Icon(Icons.exit_to_app, color: Colors.black54),

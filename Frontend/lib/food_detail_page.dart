@@ -162,10 +162,12 @@ bool isUrgent =
     
     return Scaffold(
       extendBodyBehindAppBar: true,
+      // --- Top Header ---
       appBar: AppBar(
         backgroundColor: Colors.transparent, 
         elevation: 0, 
         iconTheme: const IconThemeData(color: Colors.black87),),
+        // --- Background ---
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -173,9 +175,14 @@ bool isUrgent =
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFD6E8FF), 
+              Color(0xFFBFD9FF)
+            ],
           ),
         ),
+        // --- Main Content Area ---
         child: SafeArea(
           bottom:
               false, // Fix: Allow gradient to bleed into the bottom navigation area
@@ -313,7 +320,7 @@ bool isUrgent =
     );
   }
 
-  // --- UI 组件保持不变 ---
+  // --- Reusable Note Box ---
    Widget _noteBox(double collectAmount) {
   return Container(
     padding: const EdgeInsets.all(15),
@@ -335,6 +342,7 @@ bool isUrgent =
   );
 }
 
+  // --- Reusable Row UI ---
   Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -350,6 +358,7 @@ bool isUrgent =
     );
   }
 
+  // --- Confirmation Checkbox UI ---
   Widget _checkboxArea() {
     return Container(
       decoration: BoxDecoration(
@@ -370,6 +379,7 @@ bool isUrgent =
     );
   }
 
+  // --- Take Order Button UI ---
   Widget _btn() {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(

@@ -146,199 +146,210 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), 
+      extendBodyBehindAppBar: true,
+      //Top Header
       appBar: AppBar(
         title: const Text(
-          'Item Delivering', // 标题
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+          'Item Delivering',
+          style: TextStyle(
+            fontWeight: FontWeight.bold, 
+            color: Colors.black87
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. 数量选择区域
-            const Text(
-              "How many item you want to deliver?",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Icon(Icons.inventory_2_outlined, color: Colors.blueGrey),
-                  Row(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight, 
+            colors:[
+            Color(0xFFEAF3FF),
+            Color(0xFFD6E8FF),
+            Color(0xFFBFD9FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  "How many item you want to deliver?",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline, color: Colors.blue),
-                        onPressed: _decrementQuantity,
-                      ),
-                      Text(
-                        '$parcel_qty',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 5),
-                      const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), // 结尾写着pcs
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
-                        onPressed: _incrementQuantity,
+                      const Icon(Icons.inventory_2_outlined, color: Colors.blueGrey),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline, color: Colors.blue),
+                            onPressed: _decrementQuantity,
+                          ),
+                          Text(
+                            '$parcel_qty',
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 5),
+                          const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), // 结尾写着pcs
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                            onPressed: _incrementQuantity,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
-            // --- Pickup Section ---
-            _buildSectionTitle("Pickup Point"),
-            _buildLocationCard(
-              controller: _pickupController,
-              hint: "e.g. Library Entrance",
-              icon: Icons.location_on_outlined,
-              checkLabel: "Pick up from Dorm",
-              isCheck: _isPickupDorm,
-              onCheckChanged: (val) {
-                setState(() {
-                  _isPickupDorm = val ?? false;
-                  if (_isPickupDorm) {
-                    _pickupController.clear();
-                    _isDropOffDorm = false;
-                  }
-                });
-              },
-            ),
-
-            const SizedBox(height: 25),
-
-            // --- Dropoff Section ---
-            _buildSectionTitle("Drop Off Point"),
-            _buildLocationCard(
-              controller: _dropOffController,
-              hint: "e.g. Faculty of Engineering",
-              icon: Icons.flag_outlined,
-              checkLabel: "Drop off at Dorm",
-              isCheck: _isDropOffDorm,
-              onCheckChanged: (val) {
-                setState(() {
-                  _isDropOffDorm = val ?? false;
-                  if (_isDropOffDorm) {
-                    _dropOffController.clear();
-                    _isPickupDorm = false;
-                  }
-                });
-              },
-            ),
-            const SizedBox(height: 25),
-            
-            const Text("Any details? (Optional)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha:0.1), blurRadius: 10, spreadRadius: 2)],
-              ),
-              child: TextField(
-                controller: _detailsController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: "e.g. The item is fragile, please handle with care.",
-                  hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
-              ),
-            ),
-            const SizedBox(height: 25),
-
-            // Urgent 
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.red[50], // 用浅红色突出 Urgent
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
-              ),
-              child: CheckboxListTile(
-                title: const Text(
-                  "Urgent (+RM 1.00 surcharge)",
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                const SizedBox(height: 25),
+                // --- Pickup Section ---
+                _buildSectionTitle("Pickup Point"),
+                _buildLocationCard(
+                  controller: _pickupController,
+                  hint: "e.g. Library Entrance",
+                  icon: Icons.location_on_outlined,
+                  checkLabel: "Pick up from Dorm",
+                  isCheck: _isPickupDorm,
+                  onCheckChanged: (val) {
+                    setState(() {
+                      _isPickupDorm = val ?? false;
+                      if (_isPickupDorm) {
+                        _pickupController.clear();
+                        _isDropOffDorm = false;
+                      }
+                    });
+                  },
                 ),
-                value: _isUrgent,
-                activeColor: Colors.red,
-                checkColor: Colors.white,
-                controlAffinity: ListTileControlAffinity.leading,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _isUrgent = value ?? false;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 25),
-
-            // price card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Colors.blue]),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(color: Colors.blue.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Total to Pay",
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+                const SizedBox(height: 25),
+                // --- Dropoff Section ---
+                _buildSectionTitle("Drop Off Point"),
+                _buildLocationCard(
+                  controller: _dropOffController,
+                  hint: "e.g. Faculty of Engineering",
+                  icon: Icons.flag_outlined,
+                  checkLabel: "Drop off at Dorm",
+                  isCheck: _isDropOffDorm,
+                  onCheckChanged: (val) {
+                    setState(() {
+                      _isDropOffDorm = val ?? false;
+                      if (_isDropOffDorm) {
+                        _dropOffController.clear();
+                        _isPickupDorm = false;
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 25),
+                const Text("Any details? (Optional)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha:0.1), blurRadius: 10, spreadRadius: 2)],
                   ),
-                  Text(
-                    "RM ${_totalToCollect.toStringAsFixed(2)}",
-                    style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                  child: TextField(
+                    controller: _detailsController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "e.g. The item is fragile, please handle with care.",
+                      hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // 5. Notes 公告栏
-            // --- Info Note ---
-            _buildNote(),
-
-            const SizedBox(height: 30),
-
-            // Order Now
-            Align(
-              alignment: Alignment.bottomRight,
-              child: ElevatedButton.icon(
-                onPressed: _handleOrderNow,
-                icon: const Icon(Icons.send_rounded),
-                label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  elevation: 5,
                 ),
-              ),
+                const SizedBox(height: 25),
+                // Urgent 
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red[50], // 用浅红色突出 Urgent
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                  ),
+                  child: CheckboxListTile(
+                    title: const Text(
+                      "Urgent (+RM 1.00 surcharge)",
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                    value: _isUrgent,
+                    activeColor: Colors.red,
+                    checkColor: Colors.white,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _isUrgent = value ?? false;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 25),
+                // price card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Colors.blue]),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(color: Colors.blue.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Total to Pay",
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        "RM ${_totalToCollect.toStringAsFixed(2)}",
+                        style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // --- Info Note ---
+                _buildNote(),
+                const SizedBox(height: 30),
+                // Order Now
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: ElevatedButton.icon(
+                    onPressed: _handleOrderNow,
+                    icon: const Icon(Icons.send_rounded),
+                    label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A8A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      elevation: 5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );
