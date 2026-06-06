@@ -42,7 +42,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
   @override
   void initState() {
     super.initState();
-    _fetchLatestOrderSummary(); // 页面一打开，先查一下最新的账单
+    _fetchLatestOrderSummary(); 
   }
 
   Future<void> _fetchLatestOrderSummary() async {
@@ -107,7 +107,6 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Error: $e")),
     );
-    // 如果失败了，把滑动条重置，允许用户重试
     setState(() {
       isSubmitting = false;
       swipeValue = 0.0;
@@ -306,7 +305,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
   );
 }
 }
-
+// --- Order Summary Card ---
 Widget _infoRow(IconData icon, String title, String value){
   return Row(
     children: [

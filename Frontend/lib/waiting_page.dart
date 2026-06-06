@@ -10,7 +10,7 @@ class WaitingPage extends StatefulWidget {
   final String orderId;
   final String studentID;
   final double totalPrice;
-  final Widget targetPage; // 这个就是你在截图里定义的“第三列”页面
+  final Widget targetPage; 
   final StreamChatClient client;
 
   const WaitingPage({
@@ -121,7 +121,10 @@ class _WaitingPageState extends State<WaitingPage> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFEAF3FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFBFD9FF)
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),

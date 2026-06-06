@@ -94,82 +94,126 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _fetchDashboardData,
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildEarningsCard(),
-                  const SizedBox(height: 20),
-                  _buildSectionHeader("Current Active Tasks", currentTasks.length),
-                ],
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight, 
+            colors:[
+              Color(0xFFEAF3FF),
+              Color(0xFFD6E8FF),
+              Color(0xFFBFD9FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children:[
+              // --- Top Header ---
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children:[
+                    Text(
+                      'Runner: ${widget.runnerId}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
 
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _buildTaskCard(currentTasks[index], isActive: true),
-              ),
-              childCount: currentTasks.length,
-            ),
-          ),
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _fetchDashboardData,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // --- Earnings Card ---
+                              _buildEarningsCard(),
+                              const SizedBox(height: 20),
+                              // --- Current Active Tasks Header ---
+                              _buildSectionHeader("Current Active Tasks", currentTasks.length),
+                            ],
+                          ),
+                        ),
+                      ),
 
-          // 4. 任务大厅标题
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-              child: _buildSectionHeader("Market Available", availableTasks.length),
-            ),
-          ),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: _buildTaskCard(currentTasks[index], isActive: true),
+                          ),
+                          childCount: currentTasks.length,
+                        ),
+                      ),
 
-          // 5. 渲染大厅里的任务
-          availableTasks.isEmpty
-              ? const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(child: Text("No order yet 😴")),
-                )
-              : SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final order = availableTasks[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _buildTaskCard(order),
-                      );
-                    },
-                    childCount: availableTasks.length,
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                          child: _buildSectionHeader("Market Available", availableTasks.length),
+                        ),
+                      ),
+
+                      availableTasks.isEmpty
+                      ? const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(child: Text("No order yet 😴")),
+                      )
+                      : SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final order = availableTasks[index];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: _buildTaskCard(order),
+                            );
+                          },
+                          childCount: availableTasks.length,
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 30),
+                          child: Center(
+                            child: Text(
+                              "Swipe down to refresh orders",
+                              style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 120),
+                      ),
+
+                    ],
                   ),
                 ),
-
-          // 底部提示
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 30),
-              child: Center(
-                child: Text(
-                  "Swipe down to refresh orders",
-                  style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-          ),
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 120),
-          ),
-        ],
-      )
+              )
+            ],
+          )
+        ),
+      ),
     );
   }
 
+  // --- Earnings Card ---
   Widget _buildEarningsCard() {
     return GestureDetector(
       onTap: () {
@@ -198,7 +242,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 加上一个小提示图标或文字，让用户知道可以点击（可选）
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -224,6 +267,7 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     );
   }
 
+  // --- Section Header ---
   Widget _buildSectionHeader(String title, int count) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -247,6 +291,7 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
     );
   }
 
+  // --- Task Card ---
   Widget _buildTaskCard(Map task, {bool isActive = false}) {
     // 1. Determine Icon based on type
     IconData iconData;

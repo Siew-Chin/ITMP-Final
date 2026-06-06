@@ -26,27 +26,24 @@ class TrackingDeliveryPage extends StatefulWidget {
 }
 
 class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
-  // 状态码 (1: Order Taken, 2: Food Ordered, 3: Food Delivering, 4: Order Dropped)
-  int _currentStatus = 0; 
-  String? _runnerId;
-  String? _proofImageUrl; 
-  Timer? _timer;
+  int _currentStatus = 0; // Order status code
+  String? _runnerId; // Runner ID for chat
+  String? _proofImageUrl; // Proof photo URL from runner
+  Timer? _timer; // Timer for polling
 
   @override
   void initState() {
     super.initState();
-    _fetchOrderStatus(); // 初始化查询
-    // 设置每 3 秒轮询一次 API 4
+    _fetchOrderStatus(); // Initial fetch to get current status immediately
     _timer = Timer.periodic(const Duration(seconds: 3), (t) => _fetchOrderStatus());
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); // 销毁页面时停止轮询
+    _timer?.cancel(); // Cancel the timer when the widget is disposed to prevent memory leaks
     super.dispose();
   }
 
-  // --- API 调用：获取实时进度 ---
   Future<void> _fetchOrderStatus() async {
     final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
@@ -69,84 +66,101 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue[50],
-      appBar: AppBar(
-        title: const Text('Item Delivering', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        actions: [
-          TextButton.icon(
-            onPressed: () {
-              _timer?.cancel();
-              Navigator.pop(context);
-            },
-            icon: const Icon(Icons.close, color: Colors.black),
-            label: const Text(
-              "Exit",
-              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-            ),
-          ),
-          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
-          if (_currentStatus > 0 && _runnerId != null) 
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-              onPressed: () {
-                final String targetRunnerId = _runnerId?.toString() ?? '';
-
-                if (targetRunnerId.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Waiting for driver to connect...")),
-                  );
-                  return;
-                }
-
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ChatPage(
-                      currentUserId: widget.studentID,
-                      otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
-                      client: widget.client,
-                    )
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _fetchOrderStatus,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 10),
-              Center(
-                child: Text(
-                  "Order ID: ${widget.orderId}",
-                  style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              // 进度条
-              _buildItemTimeline(),
-
-              const SizedBox(height: 50),
-
-              // 价格卡片
-              _buildPriceCard(),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFEAF3FF),
+              Color(0xFFD6E8FF),
+              Color(0xFFBFD9FF),
             ],
           ),
         ),
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              'Item Delivering', 
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.black),
+            actions: [
+            // --- Chat Button: Only show if order is taken and runner ID is available ---
+              TextButton.icon(
+                onPressed: () {
+                  _timer?.cancel();
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.close, color: Colors.black),
+                label: const Text(
+                  "Exit",
+                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (_currentStatus > 0 && _runnerId != null) 
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+                onPressed: () {
+                  final String targetRunnerId = _runnerId?.toString() ?? '';
+
+                  if (targetRunnerId.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Waiting for driver to connect...")),
+                    );
+                    return;
+                  }
+
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => ChatPage(
+                        currentUserId: widget.studentID,
+                        otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
+                        client: widget.client,
+                      )
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          body: RefreshIndicator(
+            onRefresh: _fetchOrderStatus,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Text(
+                      "Order ID: ${widget.orderId}",
+                      style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  // --- Timeline Progress UI ---
+                  _buildItemTimeline(),
+                  const SizedBox(height: 50),
+                  // --- Price Card ---
+                  _buildPriceCard(),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: _buildBottomButton(),
+        ),
       ),
-      bottomNavigationBar: _buildBottomButton(),
     );
   }
 
+  // --- Price Card showing total price ---
   Widget _buildPriceCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -169,8 +183,8 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
     );
   }
 
+  // --- Bottom Button ---
   Widget _buildBottomButton() {
-    // 只有状态为 4 且后端上传了照片才能点击 Continue
     bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
 
     return SafeArea(
@@ -206,7 +220,7 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
     );
   }
 
-  // --- 进度条构建组件 ---
+  // --- Timeline Progress UI ---
   Widget _buildItemTimeline() {
     return Column(
       children: [
@@ -230,6 +244,7 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
     );
   }
 
+  // --- Step Dot ---
   Widget _buildStepDot(int step) {
     bool active = _currentStatus >= step;
     return Container(
@@ -239,11 +254,13 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
     );
   }
 
+  // --- Step Line ---
   Widget _buildStepLine(int step) {
     bool active = _currentStatus > step;
     return Expanded(child: Container(height: 3, color: active ? Colors.black87 : Colors.grey[300]));
   }
 
+  // --- Step Label ---
   Widget _buildStepLabel(String text, int step) {
     bool active = _currentStatus >= step;
     return SizedBox(
