@@ -10,7 +10,7 @@ class WaitingPage extends StatefulWidget {
   final String orderId;
   final String studentID;
   final double totalPrice;
-  final Widget targetPage; // 这个就是你在截图里定义的“第三列”页面
+  final Widget targetPage;
   final StreamChatClient client;
 
   const WaitingPage({
@@ -50,20 +50,19 @@ class _WaitingPageState extends State<WaitingPage> {
   Future<void> _checkOrderStatus() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}'),//API4: GetProgress
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/tracking/${widget.orderId}'),//API4: GetProgress
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         int statusCode = data['status_code'] ?? 0;
-        
-        // 只要状态不是 0 (Available)，就代表有人接单了
         if (statusCode > 0) {
           _timer?.cancel(); 
-
           if (!mounted) return;
-
-          // --- 关键修改：直接跳转到传进来的 targetPage ---
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -80,8 +79,11 @@ class _WaitingPageState extends State<WaitingPage> {
   Future<void> _cancelOrder() async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/order/cancel'),//API 27: Cancel Order (only if not taken by runner yet)
-        headers: {"Content-Type": "application/json"},
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/cancel'),//API 27: Cancel Order (only if not taken by runner yet)
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: jsonEncode({
           "order_id": widget.orderId,
           "requester_id": widget.studentID,
@@ -115,7 +117,6 @@ class _WaitingPageState extends State<WaitingPage> {
 
   @override
   Widget build(BuildContext context) {
-    // UI 部分保持不变 ...
     return Scaffold(
       body: Container(
         width: double.infinity,

@@ -7,8 +7,6 @@ import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 import 'dart:io'; 
 import 'package:image_picker/image_picker.dart';
 
-
-// Register page
 class Register extends StatefulWidget {
   final StreamChatClient client;
   const Register({super.key, required this.client});
@@ -24,8 +22,7 @@ class RegisterState extends State<Register> {
   final TextEditingController _controllerName = TextEditingController();
   final TextEditingController _controllerStudentID = TextEditingController();
   final TextEditingController _controllerPassword = TextEditingController();
-  final TextEditingController _controllerContactNumber =
-      TextEditingController();
+  final TextEditingController _controllerContactNumber = TextEditingController();
   final TextEditingController _controllerDorm = TextEditingController();
 
   Future<void> _pickImage() async {
@@ -62,11 +59,14 @@ class RegisterState extends State<Register> {
     }
 
     setState(() => _isLoading = true);
-    final url = Uri.parse('http://10.0.2.2:5000/api/register');//API 1: register
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/register');//API 1: register
 
     try {
       var request = http.MultipartRequest('POST', url);
-      
+      request.headers.addAll({
+        'ngrok-skip-browser-warning': 'true',
+      });
+
       request.fields['name'] = name;
       request.fields['student_id'] = studentID;
       request.fields['password'] = password;
@@ -77,9 +77,11 @@ class RegisterState extends State<Register> {
         _selectedImage!.path,
       ));
 
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
+      setState(() => _isLoading = false);
+      
       if (response.statusCode == 200) {
         if (!mounted) return;
         Navigator.pushReplacement(
@@ -118,7 +120,8 @@ class RegisterState extends State<Register> {
     String title,
     TextEditingController controller, {
     bool isPassword = false,
-  }) {
+  }) 
+  {
     return TextField(
       controller: controller,
       obscureText: isPassword,
@@ -141,7 +144,7 @@ class RegisterState extends State<Register> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       // Background
-      body: Stack( // 使用 Stack 以便显示加载圈
+      body: Stack( 
         children: [
           Container(
             width: double.infinity,
@@ -160,13 +163,11 @@ class RegisterState extends State<Register> {
             child: SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 30),
-
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     minHeight: MediaQuery.of(context).size.height -
                         MediaQuery.of(context).padding.top,
                   ),
-
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -196,9 +197,7 @@ class RegisterState extends State<Register> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 40),
-
                       // Page title
                       const Text(
                         "Create Account",
@@ -208,7 +207,6 @@ class RegisterState extends State<Register> {
                           color: Color(0xFF2F3A5A),
                         ),
                       ),
-
                       GestureDetector(
                         onTap: _pickImage,
                         child: CircleAvatar(

@@ -26,7 +26,6 @@ class TrackingDeliveryPage extends StatefulWidget {
 }
 
 class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
-  // 状态码 (1: Order Taken, 2: Food Ordered, 3: Food Delivering, 4: Order Dropped)
   int _currentStatus = 0; 
   String? _runnerId;
   String? _proofImageUrl; 
@@ -35,22 +34,25 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
   @override
   void initState() {
     super.initState();
-    _fetchOrderStatus(); // 初始化查询
-    // 设置每 3 秒轮询一次 API 4
+    _fetchOrderStatus(); 
     _timer = Timer.periodic(const Duration(seconds: 3), (t) => _fetchOrderStatus());
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); // 销毁页面时停止轮询
+    _timer?.cancel();
     super.dispose();
   }
-
-  // --- API 调用：获取实时进度 ---
   Future<void> _fetchOrderStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
-      final res = await http.get(url);
+      final res = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
@@ -87,32 +89,31 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
               style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
           ),
-          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
           if (_currentStatus > 0 && _runnerId != null) 
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-              onPressed: () {
-                final String targetRunnerId = _runnerId?.toString() ?? '';
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+            onPressed: () {
+              final String targetRunnerId = _runnerId?.toString() ?? '';
 
-                if (targetRunnerId.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Waiting for driver to connect...")),
-                  );
-                  return;
-                }
-
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ChatPage(
-                      currentUserId: widget.studentID,
-                      otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
-                      client: widget.client,
-                    )
-                  ),
+              if (targetRunnerId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Waiting for driver to connect...")),
                 );
-              },
-            ),
+                return;
+              }
+
+              Navigator.push(
+                context, 
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    currentUserId: widget.studentID,
+                    otherUserId: targetRunnerId, 
+                    client: widget.client,
+                  )
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -131,13 +132,8 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // 进度条
               _buildItemTimeline(),
-
               const SizedBox(height: 50),
-
-              // 价格卡片
               _buildPriceCard(),
             ],
           ),
@@ -170,27 +166,25 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
   }
 
   Widget _buildBottomButton() {
-    // 只有状态为 4 且后端上传了照片才能点击 Continue
     bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
-
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: ElevatedButton(
           onPressed: canContinue ? () {
-              _timer?.cancel();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => UserProofPhotoPage(
-                    studentID: widget.studentID,
-                    orderId: widget.orderId,
-                    imageUrl: _proofImageUrl!,
-                    client: widget.client,
-                  ),
+            _timer?.cancel();
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserProofPhotoPage(
+                  studentID: widget.studentID,
+                  orderId: widget.orderId,
+                  imageUrl: _proofImageUrl!,
+                  client: widget.client,
                 ),
-              );
-            } : null,
+              ),
+            );
+          } : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF1E3A8A),
             disabledBackgroundColor: Colors.grey[300],
@@ -206,7 +200,6 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
     );
   }
 
-  // --- 进度条构建组件 ---
   Widget _buildItemTimeline() {
     return Column(
       children: [

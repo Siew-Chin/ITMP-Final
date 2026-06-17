@@ -39,15 +39,16 @@ class _FoodDeliveringPageState extends State<FoodDeliveringPage> {
 
   @override
   void dispose() {
-    _dropOffController.dispose(); // 只有当页面彻底关掉时，才释放资源
+    _dropOffController.dispose();
     _detailsController.dispose();
     super.dispose();
   }
 
-  // --- API 逻辑 ---
   Future<void> _fetchMenu() async {
     try {
-      final response = await http.get(Uri.parse('http://10.0.2.2:5000/api/food/menu')); //API 11: Get Food Menu
+      final response = await http.get(Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/food/menu'), headers: {
+        "ngrok-skip-browser-warning": "true",
+      }); //API 11: Get Food Menu
       if (response.statusCode == 200) {
         print("Raw Response: ${response.body}");
         final decodedData = json.decode(response.body);
@@ -79,38 +80,36 @@ class _FoodDeliveringPageState extends State<FoodDeliveringPage> {
   }
 
   double get _foodPrice {
-  double price = 0.0;
+    double price = 0.0;
 
-  if (_selectedFoodName != null) {
-    final currentItems = _getCurrentFoodItems();
+    if (_selectedFoodName != null) {
+      final currentItems = _getCurrentFoodItems();
 
-    Map<String, dynamic>? food;
+      Map<String, dynamic>? food;
 
-    try {
-      food = currentItems.firstWhere(
-        (item) => item['name'] == _selectedFoodName,
-      );
-    } catch (e) {
-      food = null;
+      try {
+        food = currentItems.firstWhere(
+          (item) => item['name'] == _selectedFoodName,
+        );
+      } catch (e) {
+        food = null;
+      }
+
+      if (food != null) {
+        price = double.tryParse(food['price'].toString()) ?? 0.0;
+      }
     }
 
-    if (food != null) {
-      price = double.tryParse(food['price'].toString()) ?? 0.0;
-    }
+    return price;
   }
 
-  return price;
-}
+  double get _runnerProfit {
+    return _isUrgent ? 6.0 : 5.0;
+  }
 
-double get _runnerProfit {
-  return _isUrgent ? 6.0 : 5.0;
-}
-
-double get _totalToCollect {
-  return _foodPrice + _runnerProfit;
-}
-
-
+  double get _totalToCollect {
+    return _foodPrice + _runnerProfit;
+  }
 
   Future<void> _handleOrderNow() async {
     if (!_isDorm && _dropOffController.text.trim().isEmpty) {
@@ -132,8 +131,11 @@ double get _totalToCollect {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/food/create'), //API 12: Create Food Order 
-        headers: {"Content-Type": "application/json"},
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/food/create'), //API 12: Create Food Order 
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
         body: json.encode({
           "requester_id": widget.studentID,
           "type": "Food",
@@ -368,10 +370,9 @@ double get _totalToCollect {
                   )
                 ],
               ),
-              child: Row( // 这里的 Row 必须包含所有的文字和金额
+              child: Row( 
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 1. 左侧文字区域：包裹在 Expanded 里，防止文字太长挤走金额
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,14 +390,13 @@ double get _totalToCollect {
                     ),
                   ),
                   
-                  const SizedBox(width: 10), // 留一点点呼吸间距
+                  const SizedBox(width: 10), 
 
-                  // 2. 右侧金额：确保它在 Row 的内部！
                   Text(
                     "RM ${_totalToCollect.toStringAsFixed(2)}", 
                     style: const TextStyle(
                       color: Colors.white, 
-                      fontSize: 24, // 如果屏幕太小，可以稍微调小到 22 或 20
+                      fontSize: 24, 
                       fontWeight: FontWeight.bold
                     ),
                   ),

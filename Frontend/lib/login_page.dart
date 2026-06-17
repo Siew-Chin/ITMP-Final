@@ -17,11 +17,9 @@ class Login extends StatefulWidget {
 }
 
 class LoginState extends State<Login> {
-  // 控制器
   final TextEditingController _controllerStudentID = TextEditingController();
   final TextEditingController _controllerPassword = TextEditingController();
 
-  // 1. 技术实现 & 数据来源：异步联网登录
   Future<void> loginUser() async {
     String sID = _controllerStudentID.text.trim();
     String pw = _controllerPassword.text.trim();
@@ -36,12 +34,15 @@ class LoginState extends State<Login> {
     }
 
     
-    final url = Uri.parse('http://10.0.2.2:5000/api/login');//API 2: login
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/login');//API 2: login
 
     try {
       final response = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
         body: jsonEncode({
           "student_id": sID,
           "password": pw,
@@ -49,7 +50,6 @@ class LoginState extends State<Login> {
       );
 
       if (response.statusCode == 200) {
-        // 登录成功逻辑
         if (!mounted) return;
         Navigator.push(
           context,
@@ -77,9 +77,7 @@ class LoginState extends State<Login> {
     );
   }
 
-  // 输入框组件封装
-  Widget _entryField(String title, TextEditingController controller,
-      {bool isPassword = false}) {
+  Widget _entryField(String title, TextEditingController controller, {bool isPassword = false}) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
@@ -98,7 +96,6 @@ class LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
@@ -106,87 +103,87 @@ class LoginState extends State<Login> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-            Color(0xFFEAF3FF), // 很浅蓝
-            Color(0xFFD6E8FF), // 中浅蓝
-            Color(0xFFBFD9FF), // 柔蓝
+            Color(0xFFEAF3FF), 
+            Color(0xFFD6E8FF),
+            Color(0xFFBFD9FF),
             ],
           )
         ),
-      // 2. 布局安全：使用 SingleChildScrollView 包装，防止键盘弹出时溢出
-      child: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height,
-          ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(50),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo
-                Image.asset(
-                  "assets/logo.png",
-                  height: 400,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 20),
-                _entryField(
-                  "Student ID", _controllerStudentID),
-                const SizedBox(height: 10),
-                _entryField("Password", _controllerPassword, isPassword: true),
-                // Login button
-                Padding(
-                  padding: const EdgeInsets.all(28.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                        onPressed: () {loginUser(); // 调用联网函数
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C8EF5),
-                          foregroundColor: Colors.white,
-                          padding:const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 5,
-                          shadowColor: const Color(0xFF6C8EF5).withValues(alpha:0.3),
-                          shape:RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                        ),                      
-                        child: const Text(
-                        "Login",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                
-                // Register link
-                Row(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height,
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(50),
+                child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      "Don't have an account? ",
-                      style: TextStyle(color: Colors.blueGrey, fontSize: 16),
+                    // Logo
+                    Image.asset(
+                      "assets/logo.png",
+                      height: 400,
+                      fit: BoxFit.contain,
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Register(client: widget.client),
+                    const SizedBox(height: 20),
+                    _entryField(
+                      "Student ID", _controllerStudentID),
+                    const SizedBox(height: 10),
+                    _entryField("Password", _controllerPassword, isPassword: true),
+                    // Login button
+                    Padding(
+                      padding: const EdgeInsets.all(28.0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            loginUser(); 
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6C8EF5),
+                            foregroundColor: Colors.white,
+                            padding:const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 5,
+                            shadowColor: const Color(0xFF6C8EF5).withValues(alpha:0.3),
+                            shape:RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),                      
+                          child: const Text(
+                            "Login",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold
+                            ),
                           ),
-                        );
-                      },
-                      child: const Text(
-                        "Register",
-                        style: TextStyle(
-                          color: Color(0xFF6C8EF5),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                   const SizedBox(height: 10),
+                  // Register link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          "Don't have an account? ",
+                          style: TextStyle(color: Colors.blueGrey, fontSize: 16),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => Register(client: widget.client),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            "Register",
+                            style: TextStyle(
+                              color: Color(0xFF6C8EF5),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         )

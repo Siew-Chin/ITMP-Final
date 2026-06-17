@@ -36,8 +36,12 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}',//API 20: runner side get order detail
+          'https://animation-phoenix-crevice.ngrok-free.dev/api/order/detail/${widget.order['order_id']}',//API 20: runner side get order detail
         ),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
 
       if (!mounted) return;
@@ -64,22 +68,21 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
   }
 
   Future<void> _takeOrder() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');//API 5: Update Status 
-
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/update_status');//API 5: Update Status 
     try {
       final response = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: jsonEncode({
           "order_id": widget.order['order_id'],
           "status_code": 1,
           "runner_id": widget.runnerId,
         }),
       );
-
-      // 如果后端返回 400 或特定的错误码，说明订单状态已改变
       if (response.statusCode == 200) {
-        // 成功领单
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -91,10 +94,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
           ),
         );
       } else {
-        // 解析后端返回的消息，检查是否被取消
         final data = jsonDecode(response.body);
-        
-        // 假设后端在订单被取消时返回 status_code: -1 或者特定的 message
         if (data['current_status'] == -1 || response.statusCode == 400) {
           _showCancelDialog();
         }
@@ -104,11 +104,10 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     }
   }
 
-  // 弹出取消提示框
   void _showCancelDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // 强制用户点击按钮
+      barrierDismissible: false, 
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
@@ -136,10 +135,10 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
   }
 
   double _parsePrice(dynamic value) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? 0.0;
-  return 0.0;
-}
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 
   String _formatShoppingList(dynamic list) {
     if (list == null) return "No items";
@@ -172,7 +171,8 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
       appBar: AppBar(
         backgroundColor: Colors.transparent, 
         elevation: 0, 
-        iconTheme: const IconThemeData(color: Colors.black87),),
+        iconTheme: const IconThemeData(color: Colors.black87),
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -240,7 +240,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
                       _row(
                         Icons.shopping_cart,
                         "Shopping List",
-                         _formatShoppingList(detailedOrder?['shopping_list'] ?? widget.order['shopping_list']),
+                        _formatShoppingList(detailedOrder?['shopping_list'] ?? widget.order['shopping_list']),
                       ),
                       const SizedBox(height: 10),
                       _row(
@@ -268,7 +268,6 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
                       ),
                       const Divider(height: 30, color: Colors.black12),
                       // --- Pricing Section ---
-
                       if (itemPrice > 0)
                       _row(
                         Icons.shopping_bag,
@@ -282,15 +281,12 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
                         "Waiting for update",
                         valueColor: Colors.orange,
                       ),
-
                       const SizedBox(height: 10),
-
                       _row(
                         Icons.attach_money,
                         "Your Profit",
                         "RM ${runnerProfit.toStringAsFixed(2)}",
                       ),
-
                       if (isUrgent)
                         const SizedBox(height: 10),
 
@@ -300,9 +296,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
                           "Urgent Included",
                           "YES",
                         ),
-
                       const Divider(height: 30, color: Colors.black12),
-
                       _row(
                         Icons.payments,
                         "Total To Collect (Temporary)",
@@ -326,29 +320,28 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     );
   }
 
-  // --- UI 组件保持不变 ---
-   Widget _noteBox(double collectAmount, double itemPrice) {
-  return Container(
-    padding: const EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      color: Colors.red.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(15),
-      border: Border.all(
-        color: Colors.redAccent.withValues(alpha: 0.15),
+  Widget _noteBox(double collectAmount, double itemPrice) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: Colors.redAccent.withValues(alpha: 0.15),
+        ),
       ),
-    ),
-    child: Text(
-      itemPrice > 0
-          ? "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery."
-          : "Notice: Grocery item price has not been updated yet. The total amount will increase after purchase.",
-      style: const TextStyle(
-        fontSize: 13,
-        color: Colors.redAccent,
-        fontWeight: FontWeight.w500,
+      child: Text(
+        itemPrice > 0
+            ? "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery."
+            : "Notice: Grocery item price has not been updated yet. The total amount will increase after purchase.",
+        style: const TextStyle(
+          fontSize: 13,
+          color: Colors.redAccent,
+          fontWeight: FontWeight.w500,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
     return Padding(
@@ -395,13 +388,10 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
       onPressed: isDetailsConfirmed ? () async {
-        // 1. 先刷新数据
         await _fetchOrderDetails();
-        // 2. 检查状态
         if (detailedOrder?['status_code'] == -1) {
           _showCancelDialog();
         } else {
-          // 3. 没被取消，正常领单
           _takeOrder();
         }
       } : null,

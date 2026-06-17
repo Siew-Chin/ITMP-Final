@@ -26,7 +26,6 @@ class ParcelTrackingPage extends StatefulWidget {
 }
 
 class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
-  // 状态码 (0: Waiting, 1: Order Taken, 2: ID Taken, 3: Parcel Taken, 4: Dropped)
   int _currentStatus = 0; 
   String? _runnerId;
   String? _proofImageUrl; 
@@ -36,7 +35,6 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
   void initState() {
     super.initState();
     _fetchParcelStatus(); 
-    // 设置每 3 秒轮询一次
     _timer = Timer.periodic(const Duration(seconds: 3), (t) => _fetchParcelStatus());
   }
 
@@ -47,9 +45,15 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
   }
 
   Future<void> _fetchParcelStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
-      final res = await http.get(url);
+      final res = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
@@ -68,7 +72,7 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue[50], // 统一背景颜色
+      backgroundColor: Colors.blue[50], 
       appBar: AppBar(
         title: const Text('Parcel Tracking', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
@@ -86,32 +90,31 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
               style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
           ),
-          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
           if (_currentStatus > 0 && _runnerId != null) 
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-              onPressed: () {
-                final String targetRunnerId = _runnerId?.toString() ?? '';
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+            onPressed: () {
+              final String targetRunnerId = _runnerId?.toString() ?? '';
 
-                if (targetRunnerId.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Waiting for driver to connect...")),
-                  );
-                  return;
-                }
-
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ChatPage(
-                      currentUserId: widget.studentID,
-                      otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
-                      client: widget.client,
-                    )
-                  ),
+              if (targetRunnerId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Waiting for driver to connect...")),
                 );
-              },
-            ),
+                return;
+              }
+
+              Navigator.push(
+                context, 
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    currentUserId: widget.studentID,
+                    otherUserId: targetRunnerId,
+                    client: widget.client,
+                  )
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -130,16 +133,11 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // 第一点：判断是否在等待中
               if (_currentStatus == 0) 
                 _buildWaitingContent() 
               else 
                 _buildTrackingContent(),
-
               const SizedBox(height: 50),
-
-              // 价格卡片：使用 Total To Collect
               _buildPriceCard(),
             ],
           ),
@@ -149,7 +147,6 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
     );
   }
 
-  // --- 等待接单时的显示内容 ---
   Widget _buildWaitingContent() {
     return Column(
       children: [
@@ -173,7 +170,6 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
     );
   }
 
-  // --- 接单后的追踪内容 ---
   Widget _buildTrackingContent() {
     return Column(
       children: [
@@ -247,7 +243,6 @@ class _ParcelTrackingPageState extends State<ParcelTrackingPage> {
     );
   }
 
-  // --- 进度条构建组件 (Parcel 专用) ---
   Widget _buildParcelTimeline() {
     return Column(
       children: [

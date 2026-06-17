@@ -7,7 +7,7 @@ import 'waiting_page.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class GroceryPurchasingScreen extends StatefulWidget {
-  final String studentID; // 接收学号
+  final String studentID; 
   final StreamChatClient client;
   const GroceryPurchasingScreen({super.key, required this.studentID, required this.client});
 
@@ -31,21 +31,26 @@ class _GroceryPurchasingScreenState extends State<GroceryPurchasingScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchShops(); // 页面打开自动加载商店
+    _fetchShops(); 
   }
 
   @override
   void dispose() {
-    _dropOffController.dispose(); // 只有当页面彻底关掉时，才释放资源
+    _dropOffController.dispose();
     _detailsController.dispose();
     _listController.dispose();
     super.dispose();
   }
 
-  // --- API 逻辑 ---
   Future<void> _fetchShops() async {
     try {
-      final response = await http.get(Uri.parse('http://10.0.2.2:5000/api/grocery/shops'));//API 14: Get Shop List 
+      final response = await http.get(
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/grocery/shops'),//API 14: Get Shop List 
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
       if (response.statusCode == 200) {
         print("Raw Response: ${response.body}");
         final decodedData = json.decode(response.body);
@@ -66,15 +71,13 @@ class _GroceryPurchasingScreenState extends State<GroceryPurchasingScreen> {
     }
   }
 
-double get _runnerProfit {
-  return _isUrgent ? 6.0 : 5.0;
-}
+  double get _runnerProfit {
+    return _isUrgent ? 6.0 : 5.0;
+  }
 
-double get _totalToCollect {
-  return _itemPrice + _runnerProfit;
-}
-
-
+  double get _totalToCollect {
+    return _itemPrice + _runnerProfit;
+  }
 
   Future<void> _handleOrderNow() async {
     if (_selectedShop == null) {
@@ -85,7 +88,6 @@ double get _totalToCollect {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter your shopping list")));
       return;
     }
-    
     if (!_isDorm && _dropOffController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -105,8 +107,11 @@ double get _totalToCollect {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/grocery/create'),//API 15: Creat Grocery Order
-        headers: {"Content-Type": "application/json"},
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/grocery/create'),//API 15: Creat Grocery Order
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: json.encode({
           "requester_id": widget.studentID,
           "type": "Grocery",
@@ -173,6 +178,7 @@ double get _totalToCollect {
       child: child,
     );
   }
+  
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -338,7 +344,7 @@ double get _totalToCollect {
                     "(Grocery fee not added)",
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.8),
-                      fontSize: 12, // 减小副标题字体
+                      fontSize: 12, 
                       fontWeight: FontWeight.w400,
                     ),
                   ),

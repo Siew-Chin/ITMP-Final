@@ -16,7 +16,7 @@ class ParcelTakingPage extends StatefulWidget {
 
   @override
   State<ParcelTakingPage> createState() => _ParcelTakingPageState();
-  }
+}
 
 class _ParcelTakingPageState extends State<ParcelTakingPage> {
   int parcel_qty = 1;
@@ -32,17 +32,15 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
     super.dispose();
   }
 
-  // --- 核心计算逻辑 ---
   double get _totalPrice {
-  double basePrice = 0.0;
-  if (parcel_qty <= 5) {
-    basePrice = parcel_qty * 2.0;
-  } else {
-    basePrice = (5 * 2.0) + ((parcel_qty - 5) * 1.5);
+    double basePrice = 0.0;
+    if (parcel_qty <= 5) {
+      basePrice = parcel_qty * 2.0;
+    } else {
+      basePrice = (5 * 2.0) + ((parcel_qty - 5) * 1.5);
+    }
+    return _isUrgent ? basePrice + 1.0 : basePrice;
   }
-  
-  return _isUrgent ? basePrice + 1.0 : basePrice;
-}
 
   void _incrementQuantity() {
     setState(() {
@@ -62,7 +60,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
       backgroundColor: const Color(0xFFF5F7FA), 
       appBar: AppBar(
         title: const Text(
-          'Parcel Taking', // 标题
+          'Parcel Taking',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         backgroundColor: Colors.transparent,
@@ -74,7 +72,6 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. 数量选择区域
             const Text(
               "How many parcel you want to take ?",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -104,7 +101,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 5),
-                      const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), // 结尾写着pcs
+                      const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), 
                       IconButton(
                         icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
                         onPressed: _incrementQuantity,
@@ -116,7 +113,6 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 25),
 
-            // 2. Drop Off Point 输入框 & Dorm 勾选项
             const Text(
               "Drop Off Point",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -195,10 +191,9 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
 
             const SizedBox(height: 25),
 
-            // 3. Urgent 勾选项
             Container(
               decoration: BoxDecoration(
-                color: Colors.red[50], // 用浅红色突出 Urgent
+                color: Colors.red[50],
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
               ),
@@ -220,7 +215,6 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 25),
 
-            // 4. 总价显示
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -246,7 +240,6 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 20),
 
-            // 5. Notes 公告栏
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -268,93 +261,90 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
               ),
             ),
             const SizedBox(height: 30),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  if (!_isDorm && _dropOffController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Please enter a Drop Off Point or select Deliver to Dorm",
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(child: CircularProgressIndicator()),
+                  );
+                  try {
+                    print("DEBUG: Sending request to server...");
+                    final response = await http.post(
+                      Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/parcel/create'),//API 3: create parcel order
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': 'true', 
+                      },
+                      body: json.encode({
+                        "requester_id": widget.studentID,
+                        "type": "Parcel",
+                        "parcel_qty": parcel_qty,
+                        "dropoff_point": _dropOffController.text.trim(),
+                        "deliver_to_dorm": _isDorm,        
+                        "is_urgent": _isUrgent,
+                        "item_price": 0.0,
+                        "runner_profit": _totalPrice, 
+                        "total_to_collect": _totalPrice,
+                        "parcel_details": _parcelDetailsController.text.trim(),
+                      }),
+                    ).timeout(const Duration(seconds: 10));
 
-            // 6. 右下角 Order Now 按钮
-            // 找到按钮这一段，修改 onPressed 里的内容
-Align(
-  alignment: Alignment.bottomRight,
-  child: ElevatedButton.icon(
-    onPressed: () async {
-      if (!_isDorm && _dropOffController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Please enter a Drop Off Point or select Deliver to Dorm",
-          ),
-        ),
-      );
-      return;
-    }
+                    if (!mounted) return;
+                    Navigator.pop(context); 
 
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
+                    print("SERVER RESPONSE: ${response.body}");
 
-    try {
-    print("DEBUG: Sending request to server...");
-    final response = await http.post(
-      Uri.parse('http://10.0.2.2:5000/api/parcel/create'),//API 3: create parcel order
-      headers: {"Content-Type": "application/json"},
-      body: json.encode({
-        "requester_id": widget.studentID,
-        "type": "Parcel",
-        "parcel_qty": parcel_qty,
-        "dropoff_point": _dropOffController.text.trim(),
-        "deliver_to_dorm": _isDorm,        
-        "is_urgent": _isUrgent,
-        "item_price": 0.0,
-        "runner_profit": _totalPrice, 
-        "total_to_collect": _totalPrice,
-        "parcel_details": _parcelDetailsController.text.trim(),
-      }),
-    ).timeout(const Duration(seconds: 10));
-
-    if (!mounted) return;
-    Navigator.pop(context); // 关掉加载框
-
-    print("SERVER RESPONSE: ${response.body}");// 调试：看清楚后端到底回了什么
-
-    if (response.statusCode == 201|| response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final String? serverOrderId = data['order_id']?.toString();
-
-      if (serverOrderId != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => WaitingPage(
-              orderId: serverOrderId,
-              studentID: widget.studentID,
-              totalPrice: _totalPrice,
-              client: widget.client,
-              targetPage: ParcelTrackingPage(
-                client: widget.client,
-                orderId: serverOrderId,
-                studentID: widget.studentID,
-                totalPrice: _totalPrice,
-              ),
-            ),
-          ),
-        );
-      } else {
-        print("ERROR: order_id is missing in JSON response");
-      }
-    } else {
-      print("SERVER ERROR STATUS: ${response.statusCode}");
-    }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      print("CATCH ERROR: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Connection failed: $e")),
-      );
-    }
-  },
-            icon: const Icon(Icons.send_rounded),
-            label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
+                    if (response.statusCode == 201|| response.statusCode == 200) {
+                      final data = json.decode(response.body);
+                      final String? serverOrderId = data['order_id']?.toString();
+                      if (serverOrderId != null) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WaitingPage(
+                              orderId: serverOrderId,
+                              studentID: widget.studentID,
+                              totalPrice: _totalPrice,
+                              client: widget.client,
+                              targetPage: ParcelTrackingPage(
+                                client: widget.client,
+                                orderId: serverOrderId,
+                                studentID: widget.studentID,
+                                totalPrice: _totalPrice,
+                              ),
+                            ),
+                          ),
+                        );
+                      } else {
+                        print("ERROR: order_id is missing in JSON response");
+                      }
+                    } else {
+                      print("SERVER ERROR STATUS: ${response.statusCode}");
+                    }
+                  } catch (e) {
+                    if (mounted) Navigator.pop(context);
+                    print("CATCH ERROR: $e");
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Connection failed: $e")),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.send_rounded),
+                label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E3A8A),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),

@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'chat_page.dart';
-import 'user_proof_photo_page.dart'; // 导入 Timer 用于自动刷新
-import 'package:stream_chat_flutter/stream_chat_flutter.dart'; // 导入 StreamChatClient
+import 'user_proof_photo_page.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class UserGroceryConfirm extends StatefulWidget {
   final String orderId;
@@ -24,7 +24,6 @@ class UserGroceryConfirm extends StatefulWidget {
 }
 
 class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
-  // 状态码 (1: Order Taken, 2: Grocery Ordered, 3: Grocery Delivering, 4: Order Dropped)
   int _currentStatus = 0; 
   String? _runnerId;
   double? _totalToCollect; 
@@ -34,8 +33,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
   @override
   void initState() {
     super.initState();
-    _fetchOrderStatus();// 初始化查询
-    // 设置每 3 秒轮询一次 API 4
+    _fetchOrderStatus();
     _timer = Timer.periodic(
       const Duration(seconds: 3), 
       (t) => _fetchOrderStatus()
@@ -44,15 +42,20 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // 销毁页面时停止轮询
+    _timer?.cancel();
     super.dispose();
   }
 
-  // --- API 调用：获取实时进度 ---
   Future<void> _fetchOrderStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
-      final res = await http.get(url);
+      final res = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
@@ -90,32 +93,31 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
               style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
           ),
-          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
           if (_currentStatus > 0 && _runnerId != null) 
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-              onPressed: () {
-                final String targetRunnerId = _runnerId?.toString() ?? '';
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+            onPressed: () {
+              final String targetRunnerId = _runnerId?.toString() ?? '';
 
-                if (targetRunnerId.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Waiting for driver to connect...")),
-                  );
-                  return;
-                }
-
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ChatPage(
-                      currentUserId: widget.studentID,
-                      otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
-                      client: widget.client,
-                    )
-                  ),
+              if (targetRunnerId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Waiting for driver to connect...")),
                 );
-              },
-            ),
+                return;
+              }
+
+              Navigator.push(
+                context, 
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    currentUserId: widget.studentID,
+                    otherUserId: targetRunnerId,
+                    client: widget.client,
+                  )
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -134,15 +136,9 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // 进度条
               _buildOrderTimeline(),
-
               const SizedBox(height: 50),
-
-              // 价格卡片
               _buildPriceCard(),
-
               const SizedBox(height: 40),
               _buildPriceReminder(),
             ],
@@ -177,27 +173,25 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
   }
 
   Widget _buildBottomButton() {
-    // 只有状态为 4 且后端上传了照片才能点击 Continue
     bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
-
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: ElevatedButton(
           onPressed: canContinue ? () {
-              _timer?.cancel();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => UserProofPhotoPage(
-                    studentID: widget.studentID,
-                    orderId: widget.orderId,
-                    imageUrl: _proofImageUrl!,
-                    client: widget.client,
-                  ),
+            _timer?.cancel();
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserProofPhotoPage(
+                  studentID: widget.studentID,
+                  orderId: widget.orderId,
+                  imageUrl: _proofImageUrl!,
+                  client: widget.client,
                 ),
-              );
-            } : null,
+              ),
+            );
+          } : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF1E3A8A),
             disabledBackgroundColor: Colors.grey[300],
@@ -226,7 +220,6 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              // 如果 _totalToCollect 还没出，就显示等待中
               _totalToCollect != null
                 ? 'Reminder: Total amount to pay is RM : ${_totalToCollect!.toStringAsFixed(2)}'
                 : 'Reminder: Waiting for Runner to confirm item price...',
@@ -237,8 +230,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
       ),
     );
   }
-
-  // --- 进度条构建组件 ---
+  
   Widget _buildOrderTimeline() {
     return Column(
       children: [

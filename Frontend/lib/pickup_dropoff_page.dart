@@ -36,13 +36,13 @@ class _PickupDropoffPageState extends State<PickupDropoffPage> {
   }
 
 
-double get _runnerProfit {
-  return _isUrgent ? 6.0 : 5.0;
-}
+  double get _runnerProfit {
+    return _isUrgent ? 6.0 : 5.0;
+  }
 
-double get _totalToCollect {
-  return _runnerProfit;
-}
+  double get _totalToCollect {
+    return _runnerProfit;
+  }
 
   Future<void> _handleOrderNow() async {
     if (!_isPickupDorm && _pickupController.text.trim().isEmpty) {
@@ -56,7 +56,6 @@ double get _totalToCollect {
       return;
     }
 
-    // 校验 Drop Off Point
     if (!_isDropOffDorm && _dropOffController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -76,8 +75,11 @@ double get _totalToCollect {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/ride/create'),//API 13: Create Pickup & Drop-off Order
-        headers: {"Content-Type": "application/json"},
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/ride/create'),//API 13: Create Pickup & Drop-off Order
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
         body: json.encode({
           "requester_id": widget.studentID,
           "type": "Ride",
@@ -266,6 +268,7 @@ double get _totalToCollect {
       ),
     );
   }
+  
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),

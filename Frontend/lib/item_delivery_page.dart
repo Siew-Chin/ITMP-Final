@@ -17,7 +17,7 @@ class ItemDeliveryPage extends StatefulWidget {
 
   @override
   State<ItemDeliveryPage> createState() => _ItemDeliveryPageState();
-  }
+}
 
 class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
   int parcel_qty = 1;
@@ -28,17 +28,17 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
   bool _isDropOffDorm = false;
   bool _isUrgent = false;
 
-  // --- 核心计算逻辑 ---
-  double get _runnerProfit {
-  double basePrice = 0.0;
-  if (parcel_qty <= 5) {
-    basePrice = parcel_qty * 2.0;
-  } else {
-    basePrice = (5 * 2.0) + ((parcel_qty - 5) * 1.5);
-  }
   
-  return _isUrgent ? basePrice + 1.0 : basePrice;
-}
+  double get _runnerProfit {
+    double basePrice = 0.0;
+    if (parcel_qty <= 5) {
+      basePrice = parcel_qty * 2.0;
+    } else {
+      basePrice = (5 * 2.0) + ((parcel_qty - 5) * 1.5);
+    }
+    
+    return _isUrgent ? basePrice + 1.0 : basePrice;
+  }
 
   void _incrementQuantity() {
     setState(() {
@@ -67,7 +67,6 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
       return;
     }
 
-    // 校验 Drop Off Point
     if (!_isDropOffDorm && _dropOffController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -87,8 +86,11 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/item/create'),//API 16: Create Item Order
-        headers: {"Content-Type": "application/json"},
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/item/create'),//API 16: Create Item Order
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
         body: json.encode({
           "requester_id": widget.studentID,
           "type": "Item",
@@ -149,7 +151,7 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
       backgroundColor: const Color(0xFFF5F7FA), 
       appBar: AppBar(
         title: const Text(
-          'Item Delivering', // 标题
+          'Item Delivering', 
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         backgroundColor: Colors.transparent,
@@ -161,7 +163,6 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. 数量选择区域
             const Text(
               "How many item you want to deliver?",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -191,7 +192,7 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
                         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 5),
-                      const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), // 结尾写着pcs
+                      const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), 
                       IconButton(
                         icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
                         onPressed: _incrementQuantity,
@@ -267,7 +268,7 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
             // Urgent 
             Container(
               decoration: BoxDecoration(
-                color: Colors.red[50], // 用浅红色突出 Urgent
+                color: Colors.red[50], 
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
               ),
@@ -315,7 +316,6 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
             ),
             const SizedBox(height: 20),
 
-            // 5. Notes 公告栏
             // --- Info Note ---
             _buildNote(),
 
@@ -366,7 +366,8 @@ class _ItemDeliveryPageState extends State<ItemDeliveryPage> {
     required String checkLabel,
     required bool isCheck,
     required Function(bool?) onCheckChanged,
-  }) {
+  }) 
+  {
     return Container(
       decoration: _cardDecoration(),
       child: Column(

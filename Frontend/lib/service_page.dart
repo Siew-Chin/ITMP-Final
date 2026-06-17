@@ -24,7 +24,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 
-//Service Page (after login/register)
 class ServicePage extends StatefulWidget {
   final String studentID;
   final StreamChatClient client;
@@ -34,11 +33,10 @@ class ServicePage extends StatefulWidget {
   State<ServicePage> createState() => _ServicePageState();
 }
 
-//Service Page State
 class _ServicePageState extends State<ServicePage> {
   int _currentTabIndex = 0;
-  String? _imageUrl; // 用于存储头像 URL
-  String _userName = ""; // 用于存储用户名
+  String? _imageUrl; 
+  String _userName = ""; 
   String _statusText(int statusCode) {
   switch (statusCode) {
     case 0:
@@ -59,14 +57,18 @@ class _ServicePageState extends State<ServicePage> {
   @override
   void initState() {
     super.initState();
-    _fetchUserInfo(); // 页面加载时获取用户信息
-    _userName = widget.studentID; // 默认先显示 ID
+    _fetchUserInfo(); 
+    _userName = widget.studentID;
   }
 
   Future<void> _fetchUserInfo() async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/user/get_info/${widget.studentID}'),//API 23: Get user new info 
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/user/get_info/${widget.studentID}'),//API 23: Get user new info 
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -84,7 +86,11 @@ class _ServicePageState extends State<ServicePage> {
 
   Future<List<dynamic>> _fetchCurrentOrders() async {
     final response = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/user/current_orders?requester_id=${widget.studentID}'),//API 26: User Current Orders
+      Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/user/current_orders?requester_id=${widget.studentID}'),//API 26: User Current Orders
+      headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
     );
 
     if (response.statusCode == 200) {
@@ -96,85 +102,86 @@ class _ServicePageState extends State<ServicePage> {
   }
 
   Future<bool> _checkRunnerAccess() async {
-  try {
-    final response = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/runner/rating_status?runner_id=${widget.studentID}'),//API 25: Runner Rating Status
-    );
+    try {
+      final response = await http.get(
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/runner/rating_status?runner_id=${widget.studentID}'),//API 25: Runner Rating Status
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
 
-    if (response.statusCode != 200) {
+      if (response.statusCode != 200) {
+        return true;
+      }
+
+      final data = jsonDecode(response.body);
+
+      final int completedTaskCount = data['completed_task_count'] ?? 0;
+      final double? averageRating = data['average_rating'] == null
+          ? null
+          : double.tryParse(data['average_rating'].toString());
+
+      final bool shouldWarn = data['should_warn'] == true;
+      final bool shouldBlock = data['should_block'] == true;
+
+      if (!mounted) return false;
+
+      if (shouldBlock) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text("Runner Access Blocked"),
+            content: Text(
+              "Your rating is too low.\n\n"
+              "Completed tasks: $completedTaskCount\n"
+              "Average rating: ${averageRating?.toStringAsFixed(1) ?? 'N/A'}\n\n"
+              "You cannot access the runner page now.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+        setState(() => _currentTabIndex = 0);
+        return false;
+      }
+      if (shouldWarn) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text("Rating Warning"),
+            content: Text(
+              "Please be careful with your service quality.\n\n"
+              "Completed tasks: $completedTaskCount\n"
+              "Average rating: ${averageRating?.toStringAsFixed(1) ?? 'N/A'}\n\n"
+              "If your rating is still below 3.0 after 10 completed tasks, runner access will be blocked.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("I Understand"),
+              ),
+            ],
+          ),
+        );
+      }
+      return true;
+    } catch (e) {
+      debugPrint("Runner rating check error: $e");
       return true;
     }
-
-    final data = jsonDecode(response.body);
-
-    final int completedTaskCount = data['completed_task_count'] ?? 0;
-    final double? averageRating = data['average_rating'] == null
-        ? null
-        : double.tryParse(data['average_rating'].toString());
-
-    final bool shouldWarn = data['should_warn'] == true;
-    final bool shouldBlock = data['should_block'] == true;
-
-    if (!mounted) return false;
-
-    if (shouldBlock) {
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text("Runner Access Blocked"),
-          content: Text(
-            "Your rating is too low.\n\n"
-            "Completed tasks: $completedTaskCount\n"
-            "Average rating: ${averageRating?.toStringAsFixed(1) ?? 'N/A'}\n\n"
-            "You cannot access the runner page now.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("OK"),
-            ),
-          ],
-        ),
-      );
-
-      setState(() => _currentTabIndex = 0);
-      return false;
-    }
-
-    if (shouldWarn) {
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text("Rating Warning"),
-          content: Text(
-            "Please be careful with your service quality.\n\n"
-            "Completed tasks: $completedTaskCount\n"
-            "Average rating: ${averageRating?.toStringAsFixed(1) ?? 'N/A'}\n\n"
-            "If your rating is still below 3.0 after 10 completed tasks, runner access will be blocked.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("I Understand"),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return true;
-  } catch (e) {
-    debugPrint("Runner rating check error: $e");
-    return true;
   }
-}
 
   Widget _buildBody() {
     switch (_currentTabIndex) {
       case 0:
-        return _buildHomeContent(); // 首页的服务格子
+        return _buildHomeContent(); 
       case 1:
         return OrderHistoryPage(studentID: widget.studentID, client: widget.client);
       case 2:
@@ -230,104 +237,102 @@ class _ServicePageState extends State<ServicePage> {
       );
     }
 
-  final Widget page = statusCode == 0
-      ? WaitingPage(
-          orderId: orderId,
-          studentID: widget.studentID,
-          totalPrice: totalPrice,
-          client: widget.client,
-          targetPage: trackingPage,
-        )
-      : trackingPage;
+    final Widget page = statusCode == 0
+        ? WaitingPage(
+            orderId: orderId,
+            studentID: widget.studentID,
+            totalPrice: totalPrice,
+            client: widget.client,
+            targetPage: trackingPage,
+          )
+        : trackingPage;
 
-  Navigator.pop(context);
+    Navigator.pop(context);
 
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => page),
-  );
-}
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => page),
+    );
+  }
 
   Future<void> _showCurrentOrdersDialog() async {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) {
-      return FutureBuilder<List<dynamic>>(
-        future: _fetchCurrentOrders(),
-        builder: (context, snapshot) {
-          final orders = snapshot.data ?? [];
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return FutureBuilder<List<dynamic>>(
+          future: _fetchCurrentOrders(),
+          builder: (context, snapshot) {
+            final orders = snapshot.data ?? [];
 
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-            title: const Text("Current Orders"),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: snapshot.connectionState == ConnectionState.waiting
-                  ? const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : orders.isEmpty
-                      ? const Text("No current orders.")
-                      : ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: orders.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final order = orders[index];
-                            final statusCode = int.tryParse(order['status_code'].toString()) ?? 0;
-                            final orderTime = order['created_at'] ?? 'N/A';
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+              title: const Text("Current Orders"),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: snapshot.connectionState == ConnectionState.waiting
+                ? const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+                : orders.isEmpty
+                ? const Text("No current orders.")
+                : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: orders.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final order = orders[index];
+                    final statusCode = int.tryParse(order['status_code'].toString()) ?? 0;
+                    final orderTime = order['created_at'] ?? 'N/A';
 
-                            return InkWell(
-                              borderRadius: BorderRadius.circular(14),
-                              onTap: () => _openCurrentOrder(order),
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEAF3FF),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Order Type: ${order['type'] ?? 'Order'}",
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
-                                        ),
-                                        Text(
-                                          orderTime,
-                                          style: const TextStyle(color: Colors.grey, fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text("Status: ${_statusText(statusCode)}"),
-                                    Text("Runner: ${order['runner_name'] ?? 'Waiting for runner'}"),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => _openCurrentOrder(order),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAF3FF),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text("Close"),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Order Type: ${order['type'] ?? 'Order'}",
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  orderTime,
+                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text("Status: ${_statusText(statusCode)}"),
+                            Text("Runner: ${order['runner_name'] ?? 'Waiting for runner'}"),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
-
-
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text("Close"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -366,7 +371,6 @@ class _ServicePageState extends State<ServicePage> {
           bottom: false,
           child: Column(
             children: [
-              // --- 统一固定的 Top Bar ---
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
                 child: Row(
@@ -404,8 +408,6 @@ class _ServicePageState extends State<ServicePage> {
                   ],
                 ),
               ),
-              
-              // --- 动态变化的子页面内容 ---
               Expanded(
                 child: _buildBody(), 
               ),
@@ -480,7 +482,8 @@ class _ServicePageState extends State<ServicePage> {
     required String title, //Title
     required String imagePath, //Image path
     required VoidCallback onTap, //Tap action
-  }) {
+  }) 
+  {
     return GestureDetector(
       onTap: onTap, // Tap action
       child: Container( // Card container
@@ -512,47 +515,47 @@ class _ServicePageState extends State<ServicePage> {
             ),
             // Title and button
             Expanded(
-            child:Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2F3A5A),
+              child:Padding(
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2F3A5A),
+                      ),
                     ),
-                  ),
-                  const Spacer(), // Push the button to the bottom
+                    const Spacer(), // Push the button to the bottom
 
-                  // Select button
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFF8FB3FF),
-                          Color(0xFF5C84F7),
-                        ],
+                    // Select button
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF8FB3FF),
+                            Color(0xFF5C84F7),
+                          ],
+                        ),
+                      ),
+                      child: const Text(
+                        "Select",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      "Select",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
             ),
           ],
         ),
@@ -617,5 +620,4 @@ class _ServicePageState extends State<ServicePage> {
       ),
     );
   }
-  
 }

@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 
-// Make sure these filenames match your project exactly
 import 'drive_detail_page.dart';
 import 'parcel_detail_page.dart';
 import 'food_detail_page.dart';
@@ -18,9 +17,8 @@ import "active_parcel_task_page.dart";
 import "runner_deliverydrop.dart";
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
-import 'runner_earning_history_page.dart'; // 请确保文件名匹配
+import 'runner_earning_history_page.dart';
 
-//12
 class RunnerMainMenu extends StatefulWidget {
   final String runnerId;
   final StreamChatClient client;
@@ -58,18 +56,34 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
       // API 19: calculate Earnings
       final earnRes = await http.get(
         Uri.parse(
-          'http://10.0.2.2:5000/api/runner/earnings?runner_id=${widget.runnerId}',
+          'https://animation-phoenix-crevice.ngrok-free.dev/api/runner/earnings?runner_id=${widget.runnerId}',
         ),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
+
       // API 17: Runner menu get orders
       final marketRes = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/runner/market?runner_id=${widget.runnerId}'),
+        Uri.parse(
+          'https://animation-phoenix-crevice.ngrok-free.dev/api/runner/market?runner_id=${widget.runnerId}'
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
+      
       // API 18: Runner's Active Tasks
       final currentRes = await http.get(
         Uri.parse(
-          'http://10.0.2.2:5000/api/runner/tasks?runner_id=${widget.runnerId}',
+          'https://animation-phoenix-crevice.ngrok-free.dev/api/runner/tasks?runner_id=${widget.runnerId}',
         ),
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
 
       if (mounted) {
@@ -123,7 +137,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
             ),
           ),
 
-          // 4. 任务大厅标题
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
@@ -131,7 +144,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
             ),
           ),
 
-          // 5. 渲染大厅里的任务
           availableTasks.isEmpty
               ? const SliverFillRemaining(
                   hasScrollBody: false,
@@ -150,7 +162,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                   ),
                 ),
 
-          // 底部提示
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: 30),
@@ -198,7 +209,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 加上一个小提示图标或文字，让用户知道可以点击（可选）
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -248,7 +258,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
   }
 
   Widget _buildTaskCard(Map task, {bool isActive = false}) {
-    // 1. Determine Icon based on type
     IconData iconData;
     String type =
     (task['type'] ?? 'item')
@@ -282,9 +291,7 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
 
     return GestureDetector(
       onTap: () {
-
         Widget destination;
-
         String type =
             (task['type'] ?? 'item')
             .toString()
@@ -477,7 +484,6 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -508,53 +514,53 @@ class _RunnerMainMenuState extends State<RunnerMainMenu> {
                 ),
 
                 if (task['is_urgent'] == true)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.bolt,
-                            size: 12,
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.bolt,
+                          size: 12,
+                          color: Colors.red,
+                        ),
+
+                        SizedBox(width: 4),
+
+                        Text(
+                          "URGENT",
+                          style: TextStyle(
                             color: Colors.red,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
                           ),
-
-                          SizedBox(width: 4),
-
-                          Text(
-                            "URGENT",
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
 
                 if (isActive)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 6),
-                    child: Text(
-                      "ACTIVE",
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text(
+                    "ACTIVE",
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                ),
               ],
             )
           ],

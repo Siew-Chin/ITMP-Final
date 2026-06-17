@@ -4,14 +4,14 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'chat_page.dart'; 
-import 'user_proof_photo_page.dart'; // 确保你有这个页面
-import 'package:stream_chat_flutter/stream_chat_flutter.dart'; // 导入 StreamChatClient
+import 'user_proof_photo_page.dart'; 
+import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class FoodTrackingPage extends StatefulWidget {
   final String orderId;
   final double totalPrice;
-  final String studentID; // 补充必填的 studentID
-  final StreamChatClient client; // 补充必填的 StreamChatClient
+  final String studentID; 
+  final StreamChatClient client;
 
   const FoodTrackingPage({
     super.key,
@@ -26,7 +26,6 @@ class FoodTrackingPage extends StatefulWidget {
 }
 
 class _FoodTrackingPageState extends State<FoodTrackingPage> {
-  // 状态码 (1: Order Taken, 2: Food Ordered, 3: Food Delivering, 4: Order Dropped)
   int _currentStatus = 0; 
   String? _runnerId;
   String? _proofImageUrl; 
@@ -35,22 +34,27 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
   @override
   void initState() {
     super.initState();
-    _fetchFoodStatus(); // 初始化查询
-    // 设置每 3 秒轮询一次 API 4
+    _fetchFoodStatus(); 
     _timer = Timer.periodic(const Duration(seconds: 3), (t) => _fetchFoodStatus());
   }
 
   @override
   void dispose() {
-    _timer?.cancel(); // 销毁页面时停止轮询
+    _timer?.cancel(); 
     super.dispose();
   }
 
-  // --- API 调用：获取实时进度 ---
   Future<void> _fetchFoodStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/tracking/${widget.orderId}');//API4: GetProgress
+    
     try {
-      final res = await http.get(url);
+      final res = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
@@ -87,7 +91,6 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
               style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
           ),
-          // Chat 按钮逻辑：只有有人接单且获取到 runnerId 才能聊天
           if (_currentStatus > 0 && _runnerId != null) 
             IconButton(
               icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
@@ -106,7 +109,7 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
                   MaterialPageRoute(
                     builder: (context) => ChatPage(
                       currentUserId: widget.studentID,
-                      otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
+                      otherUserId: targetRunnerId, 
                       client: widget.client,
                     )
                   ),
@@ -132,12 +135,10 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
               ),
               const SizedBox(height: 40),
 
-              // 进度条
               _buildFoodTimeline(),
 
               const SizedBox(height: 50),
 
-              // 价格卡片
               _buildPriceCard(),
             ],
           ),
@@ -170,9 +171,7 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
   }
 
   Widget _buildBottomButton() {
-    // 只有状态为 4 且后端上传了照片才能点击 Continue
     bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
-
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -206,7 +205,6 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
     );
   }
 
-  // --- 进度条构建组件 ---
   Widget _buildFoodTimeline() {
     return Column(
       children: [

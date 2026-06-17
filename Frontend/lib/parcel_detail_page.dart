@@ -27,10 +27,10 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
   bool isLoading = true;
 
   double _parcelPrice(dynamic value) {
-  if (value is num) return value.toDouble();
-  if (value is String) return double.tryParse(value) ?? 0.0;
-  return 0.0;
-}
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
 
   @override
   void initState() {
@@ -39,23 +39,27 @@ class _ParcelDetailPageState extends State<ParcelDetailPage> {
   }
 
   Future<void> _fetchOrderDetails() async {
-  try {
-    final response = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
-    );
-    if (!mounted) return;
-    if (response.statusCode == 200) {
-      setState(() {
-        detailedOrder = jsonDecode(response.statusCode == 200 ? response.body : "{}");
-        isLoading = false;
-      });
+    try {
+      final response = await http.get(
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        setState(() {
+          detailedOrder = jsonDecode(response.statusCode == 200 ? response.body : "{}");
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Fetch Error: $e");
+      setState(() => isLoading = false);
     }
-  } catch (e) {
-    debugPrint("Fetch Error: $e");
-    setState(() => isLoading = false);
   }
-}
-bool _isSubmitting = false;
+  bool _isSubmitting = false;
 
   Future<void> _takeOrder() async {
     if (_isSubmitting) return;
@@ -64,8 +68,11 @@ bool _isSubmitting = false;
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/order/update_status'),//API 5: Update Status 
-        headers: {"Content-Type": "application/json"},
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/update_status'),//API 5: Update Status 
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
         body: jsonEncode({
           "order_id": widget.order['order_id'],
           "status_code": 1,
@@ -123,11 +130,11 @@ bool _isSubmitting = false;
       }
     }
   }
-  // 弹出取消提示框
+  
   void _showCancelDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // 强制用户点击按钮
+      barrierDismissible: false, 
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
@@ -169,7 +176,7 @@ bool _isSubmitting = false;
       detailedOrder?['total_to_collect'] ?? widget.order['total_to_collect'],
     );
 
-bool isUrgent =
+    bool isUrgent =
     detailedOrder?['is_urgent'] ?? widget.order['is_urgent'] ?? false;
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -306,25 +313,25 @@ bool isUrgent =
   }
 
   Widget _noteBox(double collectAmount) {
-  return Container(
-    padding: const EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      color: Colors.red.withValues(alpha: 0.05),
-      borderRadius: BorderRadius.circular(15),
-      border: Border.all(
-        color: Colors.redAccent.withValues(alpha: 0.15),
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: Colors.redAccent.withValues(alpha: 0.15),
+        ),
       ),
-    ),
-    child: Text(
-      "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery.",
-      style: const TextStyle(
-        fontSize: 13,
-        color: Colors.redAccent,
-        fontWeight: FontWeight.w500,
+      child: Text(
+        "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery.",
+        style: const TextStyle(
+          fontSize: 13,
+          color: Colors.redAccent,
+          fontWeight: FontWeight.w500,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _row(IconData icon, String label, String value) {
     return Row(

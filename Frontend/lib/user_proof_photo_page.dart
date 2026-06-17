@@ -38,7 +38,11 @@ class _UserProofPhotoPageState extends State<UserProofPhotoPage> {
   Future<void> _fetchPaymentAmount() async {
     try {
       final res = await http.get(
-        Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}'),//API4: GetProgress
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/tracking/${widget.orderId}'),//API4: GetProgress
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
       );
 
       if (res.statusCode == 200) {
@@ -90,13 +94,10 @@ class _UserProofPhotoPageState extends State<UserProofPhotoPage> {
     );
   }
 
-
-
   @override
   Widget build(BuildContext context){
     return Scaffold(
       backgroundColor: const Color(0xFFEAF3FF),
-
       appBar: AppBar(
         title: const Text ("Delivery Proof Photo"),
         backgroundColor: Colors.transparent,
@@ -104,7 +105,6 @@ class _UserProofPhotoPageState extends State<UserProofPhotoPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
-
         child: Column(
           children: [
             ClipRRect(
@@ -118,23 +118,18 @@ class _UserProofPhotoPageState extends State<UserProofPhotoPage> {
                   if (loadingProgress == null) return child;
                   return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
                 },
-                // 如果图片加载失败的显示
                 errorBuilder: (context, error, stackTrace) => 
                   const SizedBox(height: 300, child: Center(child: Icon(Icons.broken_image, size: 50))),
               ),
             ),
             const SizedBox(height:30),
-
             _paymentReminder(),
-
             const SizedBox(height: 24),
-
             const Text(
               "Please confirm your delivery",
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height:30),
-
             //Confirm button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -157,12 +152,13 @@ class _UserProofPhotoPageState extends State<UserProofPhotoPage> {
                   )
                 );
               },
-              child: const Text ("Confirm Delivery", style: TextStyle(fontSize:16),
-            )
-          ),
-        ]
-      )
-    )
+              child: const Text (
+                "Confirm Delivery", style: TextStyle(fontSize:16),
+              )
+            ),
+          ]
+        )
+      ) 
     );
   }
 }

@@ -48,7 +48,6 @@ def generate_token(user_id):
 @app.route('/api/register', methods=['POST'])
 def register():
     try:
-        # 1. 接收 form-data
         name = request.form.get('name')
         student_id = request.form.get('student_id')
         password = request.form.get('password')
@@ -61,7 +60,6 @@ def register():
         if db.user_detail.find_one({"student_id": student_id}):
             return jsonify({"message": "Student ID already registered"}), 409
 
-        # 2. 处理头像上传
         profile_image_name = None
         if 'profile_image' in request.files:
             file = request.files['profile_image']
@@ -71,23 +69,25 @@ def register():
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], profile_image_name)
                 file.save(file_path)
 
-        # 3. 构造用户对象
         new_user = {
             "name": name,
             "student_id": student_id,
             "password": password,
             "contact": contact,
             "dorm": dorm,
-            "profile_image": profile_image_name, # 保存文件名
+            "profile_image": profile_image_name,
             "total_earnings": 0.0,
             "created_at": datetime.utcnow()
         }
 
         db.user_detail.insert_one(new_user)
-        
-        # 4. (可选) 注册成功后顺便同步给 Stream Chat
+
         try:
-            image_url = f"http://10.0.2.2:5000/static/proofs/{profile_image_name}" if profile_image_name else ""
+            if profile_image_name:
+                base_url = request.host_url.rstrip('/')
+                image_url = f"{base_url}/static/proofs/{profile_image_name}"
+            else:
+                image_url = ""
             stream_client.upsert_user({
                 "id": student_id,
                 "name": name,
@@ -110,19 +110,14 @@ def login():
         student_id = data.get('student_id')
         password = data.get('password')
 
-        # 1. 查找用户是否存在
         user = db.user_detail.find_one({"student_id": student_id})
         
         if not user:
-            # 如果找不到该 ID，返回 404 (Not Found)
             return jsonify({"message": "Student ID not found"}), 404
         
-        # 2. 如果 ID 存在，验证密码
         if user['password'] != password:
-            # 如果密码不对，返回 401 (Unauthorized)
             return jsonify({"message": "Incorrect password"}), 401
             
-        # 3. 验证通过
         return jsonify({
             "message": "Login success",
             "name": user.get('name', 'User')
@@ -143,7 +138,6 @@ def create_parcel_order():
             "student_id": data.get("requester_id")
         })
 
-        # 自动决定 dropoff
         dropoff_point = (
             user.get("dorm", "N/A")
             if data.get("deliver_to_dorm")
@@ -166,7 +160,6 @@ def create_parcel_order():
             "parcel_qty": data.get("parcel_qty"),
             "parcel_details": data.get("parcel_details", ""),
 
-            # 存真实 dorm
             "dropoff_point": dropoff_point, 
 
             "is_urgent": data.get("is_urgent", False),
@@ -217,7 +210,6 @@ def update_status():
         new_status_code = int(data.get('status_code'))
         runner_id = data.get('runner_id')
 
-        # 1. 获取订单详情
         order = db.order.find_one({'order_id': order_id})
         if not order:
             return jsonify({"error": "Order not found"}), 404
@@ -225,7 +217,6 @@ def update_status():
         if order.get("is_cancelled") or int(order.get("status_code", 0)) == -1:
             return jsonify({"error": "Order has been cancelled"}), 400
 
-        # 不能接自己的单
         if new_status_code == 1 and order.get("requester_id") == runner_id:
             return jsonify({
             "error": "You cannot take your own order"
@@ -234,12 +225,10 @@ def update_status():
         if new_status_code == 1 and int(order.get("status_code", 0)) != 0:
             return jsonify({"error": "Order is no longer available"}), 400
 
-        # 2. 基本更新逻辑
         update_fields = {'status_code': new_status_code}
         if runner_id:
             update_fields['runner_id'] = runner_id
         
-        # 处理超市订单输入金额的情况
         amount = data.get('amount')
 
         if amount is not None:
@@ -255,9 +244,7 @@ def update_status():
             
         db.order.update_one({'order_id': order_id}, {'$set': update_fields})
 
-        # 3. 核心：结算收益 (Status 4)
         if new_status_code == 4 and runner_id:
-            # 重新查一次最新的数据库订单情况，确保拿到刚才更新过的金额
             latest_order = db.order.find_one({'order_id': order_id})
             
             if latest_order.get('is_settled'):
@@ -297,20 +284,16 @@ def upload_proof():
         return jsonify({"error": "Missing order_id or file"}), 400
     
     try:
-        # 1. 定义文件名
         filename = f"proof_{order_id}.jpg"
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         
-        # 2. 保存图片文件
         file.save(file_path)
         
-        # 3. 生成可供 User 访问的 URL
-        # 注意：User 访问时是通过这个链接下载图片的
-        image_url = f"http://10.0.2.2:5000/static/proofs/{filename}"
+        base_url = request.host_url.rstrip('/')
+        image_url = f"{base_url}/static/proofs/{filename}"
 
-        # 4. 更新数据库状态和图片路径
         result = db.order.update_one(
-            {"order_id": order_id},  # 使用清理后的 ID
+            {"order_id": order_id}, 
             {"$set": {
                 "status_code": 4,
                 "proof_photo": image_url,
@@ -337,18 +320,15 @@ def serve_proof(filename):
 @app.route('/api/get_token/<user_id>', methods=['GET'])
 def get_token(user_id):
     try:
-        # 1. 从数据库获取真实的用户资料
         user_info = users_col.find_one({"student_id": user_id})
         
-        # 默认值处理
         user_name = user_info.get("name", f"User {user_id}") if user_info else f"User {user_id}"
         
-        # 2. 构造头像 URL (确保图片已在 UPLOAD_FOLDER)
         image_url = ""
         if user_info and user_info.get("profile_image"):
-            image_url = f"http://10.0.2.2:5000/static/proofs/{user_info['profile_image']}"
+            base_url = request.host_url.rstrip('/')
+            image_url = f"{base_url}/static/proofs/{user_info['profile_image']}"
 
-        # 3. 将资料同步给 Stream Chat
         stream_client.upsert_user({
             "id": str(user_id),
             "name": user_name,
@@ -356,7 +336,6 @@ def get_token(user_id):
             "role": "admin"    
         })
 
-        # 4. 生成 Token
         token = stream_client.create_token(str(user_id))
         
         return jsonify({"token": token})
@@ -388,7 +367,6 @@ def submit_feedback():
             "submitted_at": datetime.utcnow()
         }
 
-        # update order: store feedback inside order document
         db.order.update_one(
             {"order_id": order_id},
             {"$set": {
@@ -407,7 +385,6 @@ def submit_feedback():
 def get_order_summary():
     try:
         order_id = request.args.get("order_id")
-        # 确保这里是从 db.order 拿数据
         order = db.order.find_one({"order_id": order_id})
         if not order:
             return jsonify({"error": "Order not found"}), 404
@@ -417,7 +394,7 @@ def get_order_summary():
         response = {
             "order_id": order.get("order_id"),
             "user_id": order.get("requester_id"),
-            "user_name": user.get("name") if user else "Unknown", # 加上这一行！
+            "user_name": user.get("name") if user else "Unknown", 
             "user_contact": user.get("contact") if user else "N/A",
             "runner_id": order.get("runner_id"),
             "status_code": order.get("status_code"),
@@ -433,7 +410,6 @@ def get_order_summary():
 @app.route('/api/food/menu', methods=['GET'])
 def get_all_menu():
     try:
-        # 从 Menu collection 抓取所有档口信息
         menus = list(db.Menu.find({}, {"_id": 0})) 
         return jsonify(menus), 200
     except Exception as e:
@@ -444,20 +420,17 @@ def get_all_menu():
 def create_food_order():
     try:
         data = request.json
-        # 1. 生成唯一 ID
         order_id = f"GRO-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}"
 
         user = db.user_detail.find_one({
             "student_id": data.get("requester_id")
         })
 
-        # 自动决定 dropoff
         dropoff_point = (
             user.get("dorm", "N/A")
             if data.get("deliver_to_dorm")
             else data.get("dropoff_point")
         )
-        # 2. 构造数据结构
         new_order = {
             "order_id": order_id,
             "requester_id": data.get("requester_id"),
@@ -476,8 +449,6 @@ def create_food_order():
             "created_at": datetime.utcnow(),
             "updates": [{"status": "Order Placed", "time": datetime.utcnow()}]
         }
-        
-        # 3. 存入 MongoDB 的 order collection
         db.order.insert_one(new_order)
         return jsonify({"message": "Success", "order_id": order_id}), 201
     except Exception as e:
@@ -488,7 +459,6 @@ def create_food_order():
 def create_ride_order():
     try:
         data = request.json
-        # 1. 生成 ID (RIDE-日期-随机)
         order_id = f"GRO-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:4].upper()}"
 
         user = db.user_detail.find_one({
@@ -505,15 +475,15 @@ def create_ride_order():
             user.get("dorm")
             if data.get("_isDropOffDorm")
             else data.get("dropoff_point")
-)
-        # 2. 构造打车数据结构
+        )
+
         new_order = {
             "order_id": order_id,
             "requester_id": data.get("requester_id"),
             "runner_id": None,
             "dorm" : user.get("dorm", "N/A") if user else data.get("requester_dorm", "N/A"),
-            "type": "Ride",             # 订单类型设为 Ride
-            "status_code": 0,           # 0: 待接单
+            "type": "Ride",             
+            "status_code": 0,          
             "pickup_point": pickup_point,
             "dropoff_point": dropoff_point,
             "is_urgent": data.get("is_urgent", False),
@@ -527,7 +497,6 @@ def create_ride_order():
             ]
         }
         
-        # 3. 插入 MongoDB (同样存入 order collection 方便统一管理)
         db.order.insert_one(new_order)
         
         return jsonify({
@@ -542,7 +511,6 @@ def create_ride_order():
 @app.route('/api/grocery/shops', methods=['GET'])
 def get_grocery_shops():
     try:
-        # 获取所有商店，只取名字
         shops = list(db.shops.find({}, {"_id": 0}))
         return jsonify(shops), 200
     except Exception as e:
@@ -560,7 +528,6 @@ def create_grocery_order():
             "student_id": data.get("requester_id")
         })
 
-        # 自动决定 dropoff
         dropoff_point = (
             user.get("dorm", "N/A")
             if data.get("deliver_to_dorm")
@@ -646,8 +613,8 @@ def create_item_order():
         "item_details": data.get("item_details"),
         "item_price": float(data.get("item_price", 0)),
         "runner_profit": float(data.get("runner_profit", 0)),
-        "total_to_collect": float(data.get("total_to_collect", 0)), # Fixed price per your sketch
-        "status_code": 0,    # 0 = Available
+        "total_to_collect": float(data.get("total_to_collect", 0)), 
+        "status_code": 0,  
         "created_at": datetime.utcnow()
     }
     db.order.insert_one(new_order)
@@ -708,7 +675,6 @@ def get_runner_tasks():
         for task in current:
             task['_id'] = str(task['_id'])
             
-            # 统一时间格式化处理
             if 'created_at' in task and isinstance(task['created_at'], datetime):
                 task['created_at'] = task['created_at'].strftime("%Y-%m-%d %H:%M")
             else:
@@ -759,24 +725,19 @@ def get_earnings():
 @app.route('/api/order/detail/<order_id>', methods=['GET'])
 def get_order_detail(order_id):
     try:
-        # 1. 先查订单
         order = db.order.find_one({"order_id": order_id})
         if not order:
             return jsonify({"error": "Order not found"}), 404
 
-        # 2. 确定申请人的 ID (兼容不同接口存入时的 key)
         student_id = order.get("requester_id") or order.get("student_id")
         
-        # 3. 去 user_detail 表查这个人的实时资料
         user = db.user_detail.find_one({"student_id": student_id})
         
-        # 4. 整合数据返回
         response_data = {
             "order_id": order.get("order_id"),
             "requester_id": student_id,
             "status_code": order.get("status_code", 0),
             "type": order.get("type", "Parcel"),
-            # 优先从 user 表拿最新的名字和电话，拿不到再从 order 表拿，最后给默认值
             "customer_name": user.get("name") if user else order.get("customer_name", "Unknown User"),
             "requester_contact": user.get("contact") if user else order.get("requester_contact", "N/A"),
 
@@ -813,7 +774,6 @@ def get_order_detail(order_id):
 @app.route('/api/user/update_info', methods=['POST'])
 def update_user_profile():
     try:
-        # 1. 兼容性处理：如果前端传的是 JSON，用 request.get_json()；如果是 form-data，用 request.form
         if request.is_json:
             data = request.get_json()
         else:
@@ -823,57 +783,46 @@ def update_user_profile():
         if not student_id:
             return jsonify({"msg": "student_id is required"}), 400
 
-        # 2. 构造基础更新字典
         update_fields = {}
         
-        # 定义哪些字段是允许更新的
         fields_to_check = ['name', 'password', 'contact', 'dorm']
         
         for field in fields_to_check:
             val = data.get(field)
-            # 只有当前端传过来的值不是 None 且不是空字符串时，才更新该字段
             if val is not None and val.strip() != "":
                 update_fields[field] = val.strip()
 
-        # 3. 复用你的文件上传逻辑
         if 'profile_image' in request.files:
             file = request.files['profile_image']
             if file.filename != '':
-                # 使用 uuid 或 student_id 防止文件名重复
                 ext = file.filename.split('.')[-1]
                 filename = f"profile_{student_id}.{ext}"
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(file_path)
                 
-                # 将图片路径或文件名存入数据库
                 update_fields["profile_image"] = filename
 
         if not update_fields:
             return jsonify({"msg": "No changes detected"}), 200
 
-        # 4. 执行数据库更新
         result = users_col.update_one(
             {"student_id": student_id},
             {"$set": update_fields}
         )
 
         if result.matched_count > 0:
-            # 5. 同步更新 Stream Chat 资料
             try:
-                # 准备同步到 Stream Chat 的数据
                 stream_update_data = {"id": student_id}
                 
                 if "name" in update_fields:
                     stream_update_data["name"] = update_fields["name"]
                     
-                # 核心：如果有新图片，同步图片 URL
                 if "profile_image" in update_fields:
-                    # 拼接成完整的公网/局域网访问路径
-                    full_image_url = f"http://10.0.2.2:5000/static/proofs/{update_fields['profile_image']}"
+                    base_url = request.host_url.rstrip('/')
+                    full_image_url = f"{base_url}/static/proofs/{update_fields['profile_image']}"
                     stream_update_data["image"] = full_image_url
 
-                # 调用 Stream SDK 更新用户资料
-                if len(stream_update_data) > 1: # 除了 ID 还有其他东西才更新
+                if len(stream_update_data) > 1: 
                     stream_client.upsert_user(stream_update_data)
                 
             except Exception as stream_err:
@@ -892,7 +841,7 @@ def get_order_history(student_id):
     try:
 
         query = {
-            "status_code": 4,   # 只拿 completed order
+            "status_code": 4,  
             "$or": [
                 {"requester_id": student_id},
                 {"runner_id": student_id}
@@ -965,7 +914,8 @@ def get_user_info(student_id):
             return jsonify({"message": "User not found"}), 404
         
         if user.get("profile_image"):
-            user["image_url"] = f"http://10.0.2.2:5000/static/proofs/{user['profile_image']}"
+            base_url = request.host_url.rstrip('/')
+            user["image_url"] = f"{base_url}/static/proofs/{user['profile_image']}"
         else:
             user["image_url"] = "" 
 

@@ -31,49 +31,60 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _openAvatarPreview() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
           backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          title: const Text("Profile Photo"),
-        ),
-        body: Center(
-          child: (_networkImageUrl != null && _networkImageUrl!.isNotEmpty)
-              ? InteractiveViewer(
-                  child: Image.network(
-                    _networkImageUrl!,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.person,
-                        size: 120,
-                        color: Colors.white70,
-                      );
-                    },
-                  ),
-                )
-              : const Icon(
-                  Icons.person,
-                  size: 120,
-                  color: Colors.white70,
-                ),
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            title: const Text("Profile Photo"),
+          ),
+          body: Center(
+            child: (_networkImageUrl != null && _networkImageUrl!.isNotEmpty)
+            ? InteractiveViewer(
+              child: Image.network(
+                _networkImageUrl!,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.person,
+                    size: 120,
+                    color: Colors.white70,
+                  );
+                },
+              ),
+            )
+            : const Icon(
+              Icons.person,
+              size: 120,
+              color: Colors.white70,
+            ),
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> loadProfileData() async {
     try {
-      // 仅请求用户信息和收益，删除了反馈请求
       final results = await Future.wait([
-        http.get(Uri.parse('http://10.0.2.2:5000/api/user/get_info/${widget.studentID}')),//API 23 Get user new info 
-        http.get(Uri.parse('http://10.0.2.2:5000/api/runner/earnings?runner_id=${widget.studentID}')),//API 19: calculate Earnings
+        http.get(
+          Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/user/get_info/${widget.studentID}'),//API 23 Get user new info 
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true', 
+          },
+        ),
+        http.get(
+          Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/runner/earnings?runner_id=${widget.studentID}'),//API 19: calculate Earnings
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true', 
+          },
+        ),
       ]).timeout(const Duration(seconds: 10));
 
       if (!mounted) return;
@@ -97,9 +108,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // 添加登出处理函数
   Future<void> _handleLogout() async {
-    // 显示确认弹窗
     bool? confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -123,7 +132,7 @@ class _ProfilePageState extends State<ProfilePage> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => Login(client: widget.client)),
-        (route) => false, // 这一步很重要，它会清空所有页面历史，防止用户按返回键又回来了
+        (route) => false, 
       );
     }
   }
@@ -147,7 +156,7 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           Icon(icon, color: const Color(0xFF6C8EF5), size: 24),
           const SizedBox(width: 14),
-          Expanded( // 增加 Expanded 防止长文本溢出
+          Expanded( 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -231,9 +240,9 @@ class _ProfilePageState extends State<ProfilePage> {
               context,
               MaterialPageRoute(builder: (context) => EditProfilePage(studentID: widget.studentID))
             ).then((_)async {
-              await loadProfileData();          // 先刷新 ProfilePage 自己的资料
-              widget.onProfileUpdated?.call();  // 再通知 ServicePage 刷新 top bar
-            }), // 编辑完返回后刷新数据
+              await loadProfileData();          
+              widget.onProfileUpdated?.call();  
+            }), 
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6C8EF5),
               foregroundColor: Colors.white,

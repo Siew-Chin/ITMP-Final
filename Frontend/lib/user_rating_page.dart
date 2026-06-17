@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
-final String url =  "http://google.com";
+final String url =  "https://animation-phoenix-crevice.ngrok-free.dev/api/order/feedback";
 
 class UserRatingPage extends StatefulWidget{
   final String studentID;
@@ -45,21 +45,22 @@ class _UserRatingPageState extends State<UserRatingPage>{
         print("🗨️Comment: ${response.comment}");
 
         try {
-        final res = await http.post(
-          Uri.parse("http://10.0.2.2:5000/api/order/feedback"),//API 9: Submit Feedback
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({
-            "order_id": widget.orderId, 
-            "rating": response.rating,
-            "comment": response.comment,
-          }),
-        );
-
-        print("Feedback API: ${res.body}");
-      } catch (e) {
-        print("Feedback error: $e");
-      }
-
+          final res = await http.post(
+            Uri.parse("https://animation-phoenix-crevice.ngrok-free.dev/api/order/feedback"),//API 9: Submit Feedback
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
+            body: jsonEncode({
+              "order_id": widget.orderId, 
+              "rating": response.rating,
+              "comment": response.comment,
+            }),
+          );
+          print("Feedback API: ${res.body}");
+        } catch (e) {
+          print("Feedback error: $e");
+        }
         Navigator.pop(context);
         Navigator.pushReplacement(
           context,
@@ -70,7 +71,7 @@ class _UserRatingPageState extends State<UserRatingPage>{
             ),
             )
         );
-               }
+      }
     );
     WidgetsBinding.instance.addPostFrameCallback((_){
       showDialog(
@@ -86,14 +87,14 @@ class _UserRatingPageState extends State<UserRatingPage>{
     return WillPopScope(
       onWillPop:() async => false,
       child: Scaffold(
-      //Background 
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
+        //Background 
+        body: Container(
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
               Color(0xFFEAF3FF),
               Color(0xFFD6E8FF),
               Color(0xFFBFD9FF),

@@ -10,8 +10,8 @@ import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 class PickupDropoffTrackingPage extends StatefulWidget {
   final String orderId;
   final double totalPrice;
-  final String studentID; // 记得这里也要加 studentID 
-  final StreamChatClient client; // 添加 StreamChatClient
+  final String studentID;  
+  final StreamChatClient client; 
   const PickupDropoffTrackingPage({
     super.key,
     required this.orderId,      
@@ -25,17 +25,15 @@ class PickupDropoffTrackingPage extends StatefulWidget {
 }
 
 class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
-  // 状态码 (1: Order Taken, 2: Picking Up, 3: Arrived Pickup, 4: Dropped Off)
   int _currentStatus = 0; 
-  String? _runnerId; // 司机 ID
+  String? _runnerId; 
   Timer? _timer;
   
 
   @override
   void initState() {
     super.initState();
-    _fetchRideStatus(); // 初始化
-    // 设置每 3 秒轮询一次 API 4
+    _fetchRideStatus(); 
     _timer = Timer.periodic(const Duration(seconds: 3), (t) => _fetchRideStatus());
   }
 
@@ -45,11 +43,16 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
     super.dispose();
   }
 
-  // --- API 调用：获取实时进度 ---
   Future<void> _fetchRideStatus() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/tracking/${widget.orderId}');//API4: GetProgress
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/tracking/${widget.orderId}');//API4: GetProgress
     try {
-      final res = await http.get(url);
+      final res = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
@@ -85,32 +88,31 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
               style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
           ),
-          // Chat 按钮：有人接单且拿到司机 ID 时显示
-          if (_currentStatus > 0 && _runnerId != null) 
-            IconButton(
-              icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
-              onPressed: () {
-                final String targetRunnerId = _runnerId?.toString() ?? '';
+        if (_currentStatus > 0 && _runnerId != null) 
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
+            onPressed: () {
+              final String targetRunnerId = _runnerId?.toString() ?? '';
 
-                if (targetRunnerId.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Waiting for driver to connect...")),
-                  );
-                  return;
-                }
-
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ChatPage(
-                      currentUserId: widget.studentID,
-                      otherUserId: targetRunnerId, // ✅ 使用处理后的 ID
-                      client: widget.client,
-                    )
-                  ),
+              if (targetRunnerId.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Waiting for driver to connect...")),
                 );
-              },
-            ),
+                return;
+              }
+
+              Navigator.push(
+                context, 
+                MaterialPageRoute(
+                  builder: (context) => ChatPage(
+                    currentUserId: widget.studentID,
+                    otherUserId: targetRunnerId,
+                    client: widget.client,
+                  )
+                ),
+              );
+            },
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -129,13 +131,8 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
                 ),
               ),
               const SizedBox(height: 40),
-
-              // 4 点进度图 (专为接送设计)
               _buildRideTimeline(),
-
               const SizedBox(height: 50),
-
-              // 费用卡片
               _buildPriceCard(),
             ],
           ),
@@ -168,52 +165,49 @@ class _PickupDropoffTrackingPageState extends State<PickupDropoffTrackingPage> {
   }
 
   Widget _buildBottomButton() {
-  bool canContinue = _currentStatus == 4;
+    bool canContinue = _currentStatus == 4;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: ElevatedButton(
+          onPressed: canContinue ? () {
+            _timer?.cancel();
 
-  return SafeArea(
-    child: Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: ElevatedButton(
-        onPressed: canContinue
-            ? () {
-                _timer?.cancel();
-
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserRatingPage(
-                      studentID: widget.studentID,
-                      orderId: widget.orderId,
-                      client: widget.client,
-                    ),
-                  ),
-                );
-              }
-            : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1E3A8A),
-          disabledBackgroundColor: Colors.grey[300],
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserRatingPage(
+                  studentID: widget.studentID,
+                  orderId: widget.orderId,
+                  client: widget.client,
+                ),
+              ),
+            );
+          }
+          : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1E3A8A),
+            disabledBackgroundColor: Colors.grey[300],
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
           ),
-        ),
-        child: Text(
-          _currentStatus == 4
-              ? "Continue"
-              : "Driver is on the way...",
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+          child: Text(
+            _currentStatus == 4
+                ? "Continue"
+                : "Driver is on the way...",
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-  // --- 搭车专用进度条 ---
   Widget _buildRideTimeline() {
     return Column(
       children: [

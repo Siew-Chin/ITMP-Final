@@ -24,7 +24,7 @@ class RunnerDeliveryDrop extends StatefulWidget {
 class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
   int currentStatus = 1;
   bool isLoading = false;
-  Map<String, dynamic>? liveOrder; // 存储实时数据
+  Map<String, dynamic>? liveOrder; 
   bool isPageLoading = true;
 
   @override
@@ -36,23 +36,26 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
   }
 
   Future<void> _refreshData() async {
-  try {
-    final res = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
-    );
-    if (res.statusCode == 200) {
-      setState(() {
-        liveOrder = jsonDecode(res.body);
-        currentStatus = liveOrder!['status_code'];
-        isPageLoading = false;
-      });
+    try {
+      final res = await http.get(
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+      if (res.statusCode == 200) {
+        setState(() {
+          liveOrder = jsonDecode(res.body);
+          currentStatus = liveOrder!['status_code'];
+          isPageLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => isPageLoading = false);
     }
-  } catch (e) {
-    setState(() => isPageLoading = false);
   }
-}
 
-  // 计算价格逻辑
   double _parsePrice(dynamic price) {
     if (price is num) return price.toDouble();
     if (price is String) return double.tryParse(price) ?? 0.0;
@@ -60,7 +63,6 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
   }
 
   Future<void> _updateStatus(int nextS) async {
-    // 如果是最后一步（送达并上传凭证）
     if (nextS == 4) {
       Navigator.push(
         context,
@@ -68,20 +70,22 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
           builder: (context) => RunnerProofPhotoPage(
             orderId: widget.order['order_id'].toString(),
             runnerId: widget.runnerId,
-            client: widget.client, // 你可以在拍照页也记录这个值
+            client: widget.client,
           ),
         ),
       );
       return;
     }
 
-    // 前面的步骤保持不变
     setState(() => isLoading = true);
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status'); //API 5: Update Status
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/update_status'); //API 5: Update Status
     try {
       final res = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: jsonEncode({
           "order_id": widget.order['order_id'],
           "status_code": nextS, 
@@ -120,11 +124,9 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () {
-              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
               final String targetId = liveOrder?['requester_id']?.toString() ?? 
                                       widget.order['requester_id']?.toString() ?? 
                                       '';
-
               if (targetId.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Error: Requester ID not found")),
@@ -158,8 +160,8 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView( // 1. 添加滚动视图
-            physics: const BouncingScrollPhysics(), // 添加回弹效果，体验更好
+          child: SingleChildScrollView( 
+            physics: const BouncingScrollPhysics(), 
             padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -247,7 +249,6 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
         const Divider(color: Colors.black12),
         const SizedBox(height: 8),
         
-        // 3. 最终拿回来的总现金
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -268,8 +269,7 @@ class _RunnerDeliveryDropState extends State<RunnerDeliveryDrop> {
     ),
   );
 
-// 稍微修改一下 _rowSummary 支持高亮
-Widget _rowSummary(String l, String v, {Color? valueColor, bool isHighlight = false}) => Padding(
+  Widget _rowSummary(String l, String v, {Color? valueColor, bool isHighlight = false}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -24,7 +24,7 @@ class ActiveParcelTaskPage extends StatefulWidget {
 class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
   int currentStatus = 1;
   bool isLoading = false;
-  Map<String, dynamic>? liveOrder; // 存储实时数据
+  Map<String, dynamic>? liveOrder; 
   bool isPageLoading = true;
 
   @override
@@ -36,44 +36,51 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
   }
 
   Future<void> _refreshData() async {
-  try {
-    final res = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
-    );
-    if (res.statusCode == 200) {
-      setState(() {
-        liveOrder = jsonDecode(res.body);
-        currentStatus = liveOrder!['status_code'];
-        isPageLoading = false;
-      });
+    try {
+      final res = await http.get(
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/detail/${widget.order['order_id']}'),//API 20: runner side get order detail
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true', 
+        },
+      );
+      if (res.statusCode == 200) {
+        setState(() {
+          liveOrder = jsonDecode(res.body);
+          currentStatus = liveOrder!['status_code'];
+          isPageLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => isPageLoading = false);
     }
-  } catch (e) {
-    setState(() => isPageLoading = false);
   }
-}
 
   Future<void> _updateStatus(int nextS) async {
 
     if (nextS == 4) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RunnerProofPhotoPage( // 你需要创建这个页面
-          orderId: widget.order['order_id'].toString(),
-          runnerId: widget.runnerId,
-          client: widget.client,
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RunnerProofPhotoPage( // 你需要创建这个页面
+            orderId: widget.order['order_id'].toString(),
+            runnerId: widget.runnerId,
+            client: widget.client,
+          ),
         ),
-      ),
-    );
-    return;
-  }
+      );
+      return;
+    }
 
     setState(() => isLoading = true);
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');//API 5: Update Status
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/update_status');//API 5: Update Status
     try {
       final res = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
         body: jsonEncode({
           "order_id": widget.order['order_id'],
           "status_code": nextS,
@@ -106,7 +113,6 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () {
-              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
               final String targetId = liveOrder?['requester_id']?.toString() ?? 
                                       widget.order['requester_id']?.toString() ?? 
                                       '';
@@ -144,7 +150,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView( // 1. 添加滚动视图
+          child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
@@ -228,38 +234,41 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
       ],
     ),
   );
+
   Widget _rowSummary(
     String l,
     String v, {
-    Color valueColor = Colors.black,
-  }) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l,
-              style: const TextStyle(
-                color: Colors.grey,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                v,
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: valueColor,
-                ),
-              ),
-            ),
-          ],
+      Color valueColor = Colors.black,
+    }
+  ) =>
+  Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 15,
+          ),
         ),
-      );
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            v,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: valueColor,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
   Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
@@ -277,6 +286,7 @@ class _ActiveParcelTaskPageState extends State<ActiveParcelTaskPage> {
       ),
     ),
   );
+  
   Widget _stepBtn(String l, int a, int t, Color c) {
     bool done = currentStatus > a;
     bool active = currentStatus == a;

@@ -7,7 +7,7 @@ import 'runner_proof_photo_page.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class RunnerGroceryDrop extends StatefulWidget {
-  final dynamic order; // 统一使用 order 对象
+  final dynamic order; 
   final String runnerId;
   final StreamChatClient client;
 
@@ -25,7 +25,7 @@ class RunnerGroceryDrop extends StatefulWidget {
 class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
   int currentStatus = 1;
   bool isLoading = false;
-  Map<String, dynamic>? liveOrder; // 存储实时数据
+  Map<String, dynamic>? liveOrder; 
   bool isPageLoading = true;
   final TextEditingController _amountController = TextEditingController();
   final Color _bgColor = const Color(0xFFF3F7FF);
@@ -41,31 +41,33 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
   }
 
   Future<void> _refreshData() async {
-  try {
-    final res = await http.get(
-      Uri.parse('http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}'), //API 20: runner side get order detail
-    );
-    if (res.statusCode == 200) {
-      setState(() {
-        liveOrder = jsonDecode(res.body);
+    try {
+      final res = await http.get(
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/detail/${widget.order['order_id']}'), //API 20: runner side get order detail
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+      if (res.statusCode == 200) {
+        setState(() {
+          liveOrder = jsonDecode(res.body);
 
-        currentStatus =
-            int.tryParse(liveOrder!['status_code'].toString()) ?? 1;
+          currentStatus =
+              int.tryParse(liveOrder!['status_code'].toString()) ?? 1;
 
-        _amountController.text =
-            liveOrder?['item_price']?.toString() ??
-            widget.order['item_price']?.toString() ??
-            '';
+          _amountController.text =
+              liveOrder?['item_price']?.toString() ??
+              widget.order['item_price']?.toString() ??
+              '';
 
-        isPageLoading = false;
-      });
+          isPageLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => isPageLoading = false);
     }
-  } catch (e) {
-    setState(() => isPageLoading = false);
   }
-}
-
-  // 计算价格逻辑
 
   Future<void> _updateStatus(int nextS) async {
     if (nextS == 4) {
@@ -88,29 +90,32 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
           "order_id": widget.order['order_id'],
           "status_code": nextS, 
           "runner_id": widget.runnerId,
-        };
+      };
 
       if (currentStatus == 2 && nextS == 3) {
         String receiptAmountText = _amountController.text.trim();
         double? receiptAmount = double.tryParse(receiptAmountText);
 
         if (receiptAmountText.isEmpty || receiptAmount == null || receiptAmount <= 0) {
-          setState(() => isLoading = false); // 停止 loading
+          setState(() => isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Please enter a valid amount (greater than 0)"),
               backgroundColor: Colors.orange,
             ),
           );
-          return; // 拦截，不继续执行请求
+          return; 
         }
 
         bodyData["amount"] = receiptAmountText;
       }
 
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/api/order/update_status'),//API 5: Update Status
-        headers: {"Content-Type": "application/json"},
+        Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/update_status'),//API 5: Update Status
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+        },
         body: jsonEncode(bodyData),
       );
 
@@ -167,7 +172,6 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
       );
     }
 
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -179,7 +183,6 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () {
-              // 1. 获取 ID，优先从实时数据拿，拿不到再从初始数据拿，最后给个保底
               final String targetId = liveOrder?['requester_id']?.toString() ?? 
                                       widget.order['requester_id']?.toString() ?? 
                                       '';
@@ -217,8 +220,8 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView( // 1. 添加滚动视图
-            physics: const BouncingScrollPhysics(), // 添加回弹效果，体验更好
+          child: SingleChildScrollView( 
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -340,8 +343,7 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
         const SizedBox(height: 12),
         const Divider(color: Colors.black12),
         const SizedBox(height: 8),
-        
-        // 3. 最终拿回来的总现金
+  
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -362,8 +364,7 @@ class _RunnerGroceryDropState extends State<RunnerGroceryDrop> {
     ),
   );
 
-// 稍微修改一下 _rowSummary 支持高亮
-Widget _rowSummary(String l, String v, {Color? valueColor, bool isHighlight = false}) => Padding(
+  Widget _rowSummary(String l, String v, {Color? valueColor, bool isHighlight = false}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

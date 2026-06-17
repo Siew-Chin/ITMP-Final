@@ -8,7 +8,7 @@ void main() async {
   final client = StreamChatClient(
     '659pk8bnxecv',
   logLevel: Level.INFO,
-  connectTimeout: const Duration(seconds: 30), // ✅ 从默认的 6 秒改到 30 秒
+  connectTimeout: const Duration(seconds: 30), 
   receiveTimeout: const Duration(seconds: 30),
  );
 

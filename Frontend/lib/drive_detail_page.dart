@@ -43,8 +43,13 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://10.0.2.2:5000/api/order/detail/${widget.order['order_id']}',//API 20:runner side get order detail
+          'https://animation-phoenix-crevice.ngrok-free.dev/api/order/detail/${widget.order['order_id']}',//API 20:runner side get order detail
+          
         ),
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
       );
 
       if (!mounted) return;
@@ -71,12 +76,15 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
   }
 
   Future<void> _takeOrder() async {
-    final url = Uri.parse('http://10.0.2.2:5000/api/order/update_status');//API 5: Update Status
+    final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/update_status');//API 5: Update Status
 
     try {
       final response = await http.post(
         url,
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
         body: jsonEncode({
           "order_id": widget.order['order_id'],
           "status_code": 1,
@@ -84,9 +92,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
         }),
       );
 
-      // 如果后端返回 400 或特定的错误码，说明订单状态已改变
       if (response.statusCode == 200) {
-        // 成功领单
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -98,10 +104,7 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
           ),
         );
       } else {
-        // 解析后端返回的消息，检查是否被取消
         final data = jsonDecode(response.body);
-        
-        // 假设后端在订单被取消时返回 status_code: -1 或者特定的 message
         if (data['current_status'] == -1 || response.statusCode == 400) {
           _showCancelDialog();
         }
@@ -111,11 +114,10 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
     }
   }
 
-  // 弹出取消提示框
   void _showCancelDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // 强制用户点击按钮
+      barrierDismissible: false, 
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
@@ -153,15 +155,15 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
       detailedOrder?['total_to_collect'] ?? widget.order['total_to_collect'],
     );
 
-    bool isUrgent =
-        detailedOrder?['is_urgent'] ?? widget.order['is_urgent'] ?? false;
+    bool isUrgent = detailedOrder?['is_urgent'] ?? widget.order['is_urgent'] ?? false;
         
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent, 
         elevation: 0, 
-        iconTheme: const IconThemeData(color: Colors.black87),),
+        iconTheme: const IconThemeData(color: Colors.black87),
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -175,8 +177,8 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
         child: SafeArea(
           bottom: false, // Fix: Allow gradient to bleed into the bottom navigation area
           child: isLoading 
-            ? const Center(child: CircularProgressIndicator()) // 增加 Loading 显示
-            : SingleChildScrollView(
+          ? const Center(child: CircularProgressIndicator()) 
+          : SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
             child: Column(
               children: [
@@ -221,10 +223,10 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
                       const Divider(height: 30, color: Colors.black12),
                       _row(
                         Icons.location_on,
-                        "Pickup Point",
-                        (detailedOrder?['pickup_point']
-                            ?? widget.order['pickup_point']
-                            ?? "Unknown Location"),
+                          "Pickup Point",
+                          (detailedOrder?['pickup_point']
+                              ?? widget.order['pickup_point']
+                              ?? "Unknown Location"),
                       ),
                       const SizedBox(height: 10),
                       _row(
@@ -251,26 +253,21 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
                         ),
                       ),
                       const Divider(height: 30, color: Colors.black12),
-                      // --- Pricing Section ---
 
                       _row(
                         Icons.attach_money,
                         "Your Profit",
                         "RM ${runnerProfit.toStringAsFixed(2)}",
                       ),
-
                       if (isUrgent)
-                        const SizedBox(height: 10),
-
+                      const SizedBox(height: 10),
                       if (isUrgent)
-                        _row(
-                          Icons.bolt,
-                          "Urgent Included",
-                          "YES",
-                        ),
-
+                      _row(
+                        Icons.bolt,
+                        "Urgent Included",
+                        "YES",
+                      ),
                       const Divider(height: 30, color: Colors.black12),
-
                       _row(
                         Icons.payments,
                         "Total To Collect",
@@ -360,13 +357,10 @@ class _DriveDetailPageState extends State<DriveDetailPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
       ),
       onPressed: isDetailsConfirmed ? () async {
-        // 1. 先刷新数据
         await _fetchOrderDetails();
-        // 2. 检查状态
         if (detailedOrder?['status_code'] == -1) {
           _showCancelDialog();
         } else {
-          // 3. 没被取消，正常领单
           _takeOrder();
         }
       } : null,
