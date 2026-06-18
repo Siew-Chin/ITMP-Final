@@ -73,9 +73,16 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue[50],
+      extendBodyBehindAppBar: true,
+      //Top Header
       appBar: AppBar(
-        title: const Text('Food Delivering', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Food Delivering', 
+          style: TextStyle(
+            color: Colors.black, 
+            fontWeight: FontWeight.bold
+            )
+          ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -118,36 +125,54 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchFoodStatus,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 10),
-              Center(
-                child: Text(
-                  "Order ID: ${widget.orderId}",
-                  style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              _buildFoodTimeline(),
-
-              const SizedBox(height: 50),
-
-              _buildPriceCard(),
+      // --- Background Gradient ---
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight, 
+            colors:[
+            Color(0xFFEAF3FF),
+            Color(0xFFD6E8FF),
+            Color(0xFFBFD9FF),
             ],
           ),
         ),
+        // --- Main Content ---
+        child: SafeArea(
+          child: RefreshIndicator(
+            onRefresh: _fetchFoodStatus,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Text(
+                      "Order ID: ${widget.orderId}",
+                      style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  _buildFoodTimeline(),
+                  const SizedBox(height: 50),
+                  _buildPriceCard(),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
+      // --- Bottom Button ---
       bottomNavigationBar: _buildBottomButton(),
     );
   }
 
+  // --- Card showing total price ---
   Widget _buildPriceCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -170,6 +195,7 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
     );
   }
 
+  // --- Bottom Button ---
   Widget _buildBottomButton() {
     bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
     return SafeArea(
@@ -197,7 +223,9 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           ),
           child: Text(
-            _currentStatus == 4 ? "Receive & View Proof" : "Food is on the way...",
+            _currentStatus == 4 
+            ? "Receive & View Proof" 
+            : "Food is on the way...",
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
@@ -205,6 +233,7 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
     );
   }
 
+  // --- Food Timeline ---
   Widget _buildFoodTimeline() {
     return Column(
       children: [
@@ -228,6 +257,7 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
     );
   }
 
+  // --- Step Dot UI ---
   Widget _buildStepDot(int step) {
     bool active = _currentStatus >= step;
     return Container(
@@ -237,11 +267,13 @@ class _FoodTrackingPageState extends State<FoodTrackingPage> {
     );
   }
 
+  // --- Step Line UI ---
   Widget _buildStepLine(int step) {
     bool active = _currentStatus > step;
     return Expanded(child: Container(height: 3, color: active ? Colors.black87 : Colors.grey[300]));
   }
 
+   // --- Step Label UI ---
   Widget _buildStepLabel(String text, int step) {
     bool active = _currentStatus >= step;
     return SizedBox(

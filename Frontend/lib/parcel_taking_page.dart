@@ -32,6 +32,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
     super.dispose();
   }
 
+  // --- Price Calculation ---
   double get _totalPrice {
     double basePrice = 0.0;
     if (parcel_qty <= 5) {
@@ -42,6 +43,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
     return _isUrgent ? basePrice + 1.0 : basePrice;
   }
 
+  // --- Quantity control ---
   void _incrementQuantity() {
     setState(() {
       if (parcel_qty < 10) parcel_qty++;
@@ -57,62 +59,80 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), 
+      extendBodyBehindAppBar: true,
+      //Top Header
       appBar: AppBar(
         title: const Text(
-          'Parcel Taking',
+          'Parcel Taking', 
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              "How many parcel you want to take ?",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Icon(Icons.inventory_2_outlined, color: Colors.blueGrey),
-                  Row(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight, 
+            colors:[
+              Color(0xFFEAF3FF),
+              Color(0xFFD6E8FF),
+              Color(0xFFBFD9FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  "How many parcel you want to take ?",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                //Quantity selector container
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline, color: Colors.blue),
-                        onPressed: _decrementQuantity,
-                      ),
-                      Text(
-                        '$parcel_qty',
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 5),
-                      const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), 
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
-                        onPressed: _incrementQuantity,
+                      const Icon(Icons.inventory_2_outlined, color: Colors.blueGrey),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline, color: Colors.blue),
+                            onPressed: _decrementQuantity,
+                          ),
+                          Text(
+                            '$parcel_qty',
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 5),
+                          const Text("pcs", style: TextStyle(color: Colors.blueGrey, fontSize: 16)), 
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                            onPressed: _incrementQuantity,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
+                ),
+                const SizedBox(height: 25),
 
+            // --- Drop Off Section ---
             const Text(
               "Drop Off Point",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -127,6 +147,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                 ],
               ),
               child: Column(
+                // Drop-off location input field
                 children: [
                   TextField(
                     controller: _dropOffController,
@@ -138,6 +159,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                     ),
                   ),
                   const Divider(height: 1),
+                  //Checkbox: deliver to dorm
                   CheckboxListTile(
                     title: const Text("Deliver to Dorm", style: TextStyle(fontWeight: FontWeight.w500)),
                     value: _isDorm,
@@ -157,39 +179,39 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 25),
 
-            const Text(
-              "Parcel Details",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _parcelDetailsController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  prefixIcon: Padding(
-                    padding: EdgeInsets.only(bottom: 70),
-                    child: Icon(Icons.description_outlined, color: Colors.blueGrey),
-                  ),
-                  hintText: "e.g. 2 Shopee parcels, 1 fragile box",
-                  contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 12),
+                const Text(
+                  "Parcel Details",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ),
+                const SizedBox(height: 10),
 
-            const SizedBox(height: 25),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _parcelDetailsController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.only(bottom: 70),
+                        child: Icon(Icons.description_outlined, color: Colors.blueGrey),
+                      ),
+                      hintText: "e.g. 2 Shopee parcels, 1 fragile box",
+                      contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 25),
 
             Container(
               decoration: BoxDecoration(
@@ -215,6 +237,31 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 25),
 
+                // --- Total Price Display ---
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Colors.blue]),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(color: Colors.blue.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Total to Pay",
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        "RM ${_totalPrice.toStringAsFixed(2)}",
+                        style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -240,6 +287,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
             ),
             const SizedBox(height: 20),
 
+            // --- Note Section ---
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -261,6 +309,7 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
               ),
             ),
             const SizedBox(height: 30),
+             // --- Order Button ---
             Align(
               alignment: Alignment.bottomRight,
               child: ElevatedButton.icon(

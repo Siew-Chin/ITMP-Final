@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'chat_page.dart';
-import 'user_proof_photo_page.dart'; 
+import 'user_proof_photo_page.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
 class UserGroceryConfirm extends StatefulWidget {
@@ -24,11 +24,11 @@ class UserGroceryConfirm extends StatefulWidget {
 }
 
 class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
-  int _currentStatus = 0; 
-  String? _runnerId;
-  double? _totalToCollect; 
-  String? _proofImageUrl; 
-  Timer? _timer;
+  int _currentStatus = 0; // Order status code
+  String? _runnerId; // Runner ID for chat
+  double? _totalToCollect; // Total amount to collect from user
+  String? _proofImageUrl; // Proof photo URL from runner
+  Timer? _timer; // Timer for polling
 
   @override
   void initState() {
@@ -76,11 +76,13 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.blue[50],
+      // --- AppBar ---
       appBar: AppBar(
         title: const Text('Grocery Delivering', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+        // --- Chat Button ---
         actions: [
           TextButton.icon(
             onPressed: () {
@@ -120,6 +122,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
           ),
         ],
       ),
+      // --- Pull to Refresh ---
       body: RefreshIndicator(
         onRefresh: _fetchOrderStatus,
         child: SingleChildScrollView(
@@ -129,6 +132,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 10),
+              // --- Order ID Display ---
               Center(
                 child: Text(
                   "Order ID: ${widget.orderId}",
@@ -136,19 +140,24 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
                 ),
               ),
               const SizedBox(height: 40),
+              // --- Timeline Progress UI ---
               _buildOrderTimeline(),
               const SizedBox(height: 50),
+              // --- Total Price Card ---
               _buildPriceCard(),
               const SizedBox(height: 40),
+              // --- Price Reminder ---
               _buildPriceReminder(),
             ],
           ),
         ),
       ),
+      // --- Bottom Button for Proof Photo ---
       bottomNavigationBar: _buildBottomButton(),
     );
   }
 
+  // --- Price Card ---
   Widget _buildPriceCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -172,6 +181,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
+  // --- Bottom Button for Proof Photo ---
   Widget _buildBottomButton() {
     bool canContinue = _currentStatus == 4 && _proofImageUrl != null;
     return SafeArea(
@@ -199,7 +209,9 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           ),
           child: Text(
-            _currentStatus == 4 ? "Receive & View Proof" : "Grocery is on the way...",
+            _currentStatus == 4 
+            ? "Receive & View Proof" 
+            : "Grocery is on the way...",
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
@@ -207,6 +219,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
+  // --- Reminder box showing price info ---
   Widget _buildPriceReminder() {
     return Container(
       padding: const EdgeInsets.all(15),
@@ -230,7 +243,8 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
       ),
     );
   }
-  
+
+  //  --- Order Timeline ---
   Widget _buildOrderTimeline() {
     return Column(
       children: [
@@ -254,6 +268,7 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
+  // --- Step Circle Indicator ---
   Widget _buildStepDot(int step) {
     bool active = _currentStatus >= step;
     return Container(
@@ -263,11 +278,13 @@ class _UserGroceryConfirmState extends State<UserGroceryConfirm> {
     );
   }
 
+   // --- Step Line Indicator ---
   Widget _buildStepLine(int step) {
     bool active = _currentStatus > step;
     return Expanded(child: Container(height: 3, color: active ? Colors.black87 : Colors.grey[300]));
   }
 
+  // --- Step Label ---
   Widget _buildStepLabel(String text, int step) {
     bool active = _currentStatus >= step;
     return SizedBox(

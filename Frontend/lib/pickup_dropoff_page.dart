@@ -136,134 +136,152 @@ class _PickupDropoffPageState extends State<PickupDropoffPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue[50],
+      extendBodyBehindAppBar: true,
+      //Top Header
       appBar: AppBar(
         title: const Text('Ride', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // --- Pickup Section ---
-            _buildSectionTitle("Pickup Point"),
-            _buildLocationCard(
-              controller: _pickupController,
-              hint: "e.g. Library Entrance",
-              icon: Icons.location_on_outlined,
-              checkLabel: "Pick up from Dorm",
-              isCheck: _isPickupDorm,
-              onCheckChanged: (val) {
-                setState(() {
-                  _isPickupDorm = val ?? false;
-                  if (_isPickupDorm) {
-                    _pickupController.clear();
-                    _isDropOffDorm = false;
-                  }
-                });
-              },
-            ),
-
-            const SizedBox(height: 25),
-
-            // --- Dropoff Section ---
-            _buildSectionTitle("Drop Off Point"),
-            _buildLocationCard(
-              controller: _dropOffController,
-              hint: "e.g. Faculty of Engineering",
-              icon: Icons.flag_outlined,
-              checkLabel: "Drop off at Dorm",
-              isCheck: _isDropOffDorm,
-              onCheckChanged: (val) {
-                setState(() {
-                  _isDropOffDorm = val ?? false;
-                  if (_isDropOffDorm) {
-                    _dropOffController.clear();
-                    _isPickupDorm = false;
-                  }
-                });
-              },
-            ),
-
-            const SizedBox(height: 25),
-
-            _buildSectionTitle("Any details? (Optional)"),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              decoration: _cardDecoration(),
-              child: TextField(
-                controller: _detailsController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: "e.g. I'm wearing a red shirt.",
-                  hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight, 
+            colors:[
+              Color(0xFFEAF3FF),
+              Color(0xFFD6E8FF),
+              Color(0xFFBFD9FF),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // --- Pickup Section ---
+                _buildSectionTitle("Pickup Point"),
+                _buildLocationCard(
+                  controller: _pickupController,
+                  hint: "e.g. Library Entrance",
+                  icon: Icons.location_on_outlined,
+                  checkLabel: "Pick up from Dorm",
+                  isCheck: _isPickupDorm,
+                  onCheckChanged: (val) {
+                    setState(() {
+                      _isPickupDorm = val ?? false;
+                      if (_isPickupDorm) {
+                        _pickupController.clear();
+                        _isDropOffDorm = false;
+                      }
+                    });
+                  },
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 25),
+                const SizedBox(height: 25),
 
-            // --- Urgent Checkbox ---
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
-              ),
-              child: CheckboxListTile(
-                title: const Text("Urgent (+RM 1.00 fee)", 
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                value: _isUrgent,
-                activeColor: Colors.red,
-                controlAffinity: ListTileControlAffinity.leading,
-                onChanged: (val) => setState(() => _isUrgent = val ?? false),
-              ),
-            ),
-
-            const SizedBox(height: 25),
-            // --- Total Price Card ---
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Colors.blue]),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha:0.3), blurRadius: 10, offset: const Offset(0, 5))],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Total to Pay", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
-                  Text("RM ${_totalToCollect.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // --- Info Note ---
-            _buildNote(),
-
-            const SizedBox(height: 30),
-            // --- Order Button ---
-            Align(
-              alignment: Alignment.bottomRight,
-              child: ElevatedButton.icon(
-                onPressed: _handleOrderNow,
-                icon: const Icon(Icons.send_rounded),
-                label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  elevation: 5,
+                // --- Dropoff Section ---
+                _buildSectionTitle("Drop Off Point"),
+                _buildLocationCard(
+                  controller: _dropOffController,
+                  hint: "e.g. Faculty of Engineering",
+                  icon: Icons.flag_outlined,
+                  checkLabel: "Drop off at Dorm",
+                  isCheck: _isDropOffDorm,
+                  onCheckChanged: (val) {
+                    setState(() {
+                      _isDropOffDorm = val ?? false;
+                      if (_isDropOffDorm) {
+                        _dropOffController.clear();
+                        _isPickupDorm = false;
+                      }
+                    });
+                  },
                 ),
-              ),
+
+                const SizedBox(height: 25),
+
+                _buildSectionTitle("Any details? (Optional)"),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  decoration: _cardDecoration(),
+                  child: TextField(
+                    controller: _detailsController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "e.g. I'm wearing a red shirt.",
+                      hintStyle: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+
+                // --- Urgent Checkbox ---
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                  ),
+                  child: CheckboxListTile(
+                    title: const Text("Urgent (+RM 1.00 fee)", 
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                    value: _isUrgent,
+                    activeColor: Colors.red,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: (val) => setState(() => _isUrgent = val ?? false),
+                  ),
+                ),
+
+                const SizedBox(height: 25),
+                // --- Total Price Card ---
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Colors.blue]),
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha:0.3), blurRadius: 10, offset: const Offset(0, 5))],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Total to Pay", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500)),
+                      Text("RM ${_totalToCollect.toStringAsFixed(2)}", style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // --- Info Note ---
+                _buildNote(),
+
+                const SizedBox(height: 30),
+                // --- Order Button ---
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: ElevatedButton.icon(
+                    onPressed: _handleOrderNow,
+                    icon: const Icon(Icons.send_rounded),
+                    label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A8A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      elevation: 5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );
@@ -291,7 +309,8 @@ class _PickupDropoffPageState extends State<PickupDropoffPage> {
     required String checkLabel,
     required bool isCheck,
     required Function(bool?) onCheckChanged,
-  }) {
+  }) 
+  {
     return Container(
       decoration: _cardDecoration(),
       child: Column(

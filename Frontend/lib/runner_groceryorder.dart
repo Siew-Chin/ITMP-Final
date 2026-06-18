@@ -180,7 +180,11 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFD6E8FF), 
+              Color(0xFFBFD9FF)
+            ],
           ),
         ),
         child: SafeArea(
@@ -320,29 +324,31 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     );
   }
 
-  Widget _noteBox(double collectAmount, double itemPrice) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: Colors.redAccent.withValues(alpha: 0.15),
-        ),
+  // --- Note Box ---
+   Widget _noteBox(double collectAmount, double itemPrice) {
+  return Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.red.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(
+        color: Colors.redAccent.withValues(alpha: 0.15),
       ),
-      child: Text(
-        itemPrice > 0
-            ? "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery."
-            : "Notice: Grocery item price has not been updated yet. The total amount will increase after purchase.",
-        style: const TextStyle(
-          fontSize: 13,
-          color: Colors.redAccent,
-          fontWeight: FontWeight.w500,
-        ),
+    ),
+    child: Text(
+      itemPrice > 0
+          ? "Notice: Please collect RM ${collectAmount.toStringAsFixed(2)} from the customer after delivery."
+          : "Notice: Grocery item price has not been updated yet. The total amount will increase after purchase.",
+      style: const TextStyle(
+        fontSize: 13,
+        color: Colors.redAccent,
+        fontWeight: FontWeight.w500,
       ),
-    );
-  }
+    ),
+  );
+}
 
+  //--- Reusable Row Widget ---
   Widget _row(IconData icon, String label, String value, {Color? valueColor, bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -358,6 +364,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     );
   }
 
+  // --- Confirmation Checkbox ---
   Widget _checkboxArea() {
     return Container(
       decoration: BoxDecoration(
@@ -378,6 +385,7 @@ class _RunnerGroceryOrderState extends State<RunnerGroceryOrder> {
     );
   }
 
+ // --- Price Card ---
   Widget _btn() {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(

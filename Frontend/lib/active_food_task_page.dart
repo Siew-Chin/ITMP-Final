@@ -22,10 +22,10 @@ class ActiveFoodTaskPage extends StatefulWidget {
 }
 
 class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
-  int currentStatus = 1;
-  bool isLoading = false;
-  Map<String, dynamic>? liveOrder;
-  bool isPageLoading = true;
+  int currentStatus = 1; // current order status step
+  bool isLoading = false; // loading indicator for status update
+  Map<String, dynamic>? liveOrder; // store real-time order data
+  bool isPageLoading = true; // initial page loading state
 
   @override
   void initState() {
@@ -56,12 +56,14 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
     }
   }
 
+  //Calculate price from dynamic type
   double _parsePrice(dynamic price) {
     if (price is num) return price.toDouble();
     if (price is String) return double.tryParse(price) ?? 0.0;
     return 0.0;
   }
 
+  // Update order status and navigate to proof photo page
   Future<void> _updateStatus(int nextS) async {
     if (nextS == 4) {
       Navigator.push(
@@ -120,11 +122,13 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
+      // --- AppBar ---
       appBar: AppBar(
         title: const Text(
           "Task Progress",
           style: TextStyle(color: Color(0xFF2F3A5A), fontWeight: FontWeight.bold),
         ),
+        // --- Chat Button ---
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
@@ -155,6 +159,7 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF2F3A5A)),
       ),
+      // --- Background ---
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -165,6 +170,7 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
             colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
           ),
         ),
+        // --- Main Content ---
         child: SafeArea(
           child: SingleChildScrollView( 
             physics: const BouncingScrollPhysics(), 
@@ -172,8 +178,10 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // --- Payment Summary Card ---
                 _summaryCard(foodPrice, earning, totalToCollect),
                 const SizedBox(height: 25),
+                // --- Payment Instructions ---
                 const Text(
                   "Payment Reminder:",
                   style: TextStyle(
@@ -200,7 +208,9 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
                 const SizedBox(height: 12),
                 _stepBtn("3. Delivered & Proof", 3, 4, const Color(0xFF6C8EF5)),
                 const SizedBox(height: 40),
+                // --- Exit Button ---
                 _escapeBtn(),
+                // --- Loading Indicator ---
                 if (isLoading)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 20),
@@ -214,7 +224,7 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
       ),
     );
   }
-
+  // --- Summary Card UI ---
   Widget _summaryCard(double food, double earn, double total) => Container(
     padding: const EdgeInsets.all(25),
     decoration: BoxDecoration(
@@ -259,14 +269,22 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
         const Divider(color: Colors.black12),
         const SizedBox(height: 8),
         
+        // --- Final cash summary ---
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Total to Collect", style: TextStyle(color: Color(0xFF2F3A5A), fontWeight: FontWeight.bold, fontSize: 16)),
-                Text("(Cash from Customer)", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                Text(
+                  "Total to Collect", 
+                  style: TextStyle(color: Color(0xFF2F3A5A), fontWeight: 
+                  FontWeight.bold, fontSize: 16)
+                ),
+                Text(
+                  "(Cash from Customer)", 
+                  style: TextStyle(color: Colors.grey, fontSize: 11)
+                ),
               ],
             ),
             Text(
@@ -279,7 +297,8 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
     ),
   );
 
-  Widget _rowSummary(String l, String v, {Color? valueColor, bool isHighlight = false}) => Padding(
+// --- Reusable UI components ---
+Widget _rowSummary(String l, String v, {Color? valueColor, bool isHighlight = false}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -296,7 +315,7 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
       ],
     ),
   );
-
+  //--- Note Box UI ---
   Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
@@ -314,7 +333,7 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
       ),
     ),
   );
-
+  // --- Step Button UI ---
   Widget _stepBtn(String l, int a, int t, Color c) {
     bool done = currentStatus > a;
     bool active = currentStatus == a;
@@ -338,7 +357,7 @@ class _ActiveFoodTaskPageState extends State<ActiveFoodTaskPage> {
       ),
     );
   }
-
+  // --- Exit Button ---
   Widget _escapeBtn() => TextButton.icon(
     onPressed: () => Navigator.pop(context),
     icon: const Icon(Icons.dashboard_outlined, color: Colors.blueGrey),

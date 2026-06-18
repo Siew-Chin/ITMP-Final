@@ -42,7 +42,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
   @override
   void initState() {
     super.initState();
-    _fetchLatestOrderSummary();
+    _fetchLatestOrderSummary(); 
   }
 
   Future<void> _fetchLatestOrderSummary() async {
@@ -97,27 +97,27 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
           const SnackBar(content: Text("Payment confirmed & Earnings added!")),
         );
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ServicePage(studentID: widget.studentID, client: widget.client,),
-          ),
-        );
-      } else {
-        final errorMsg = jsonDecode(response.body)['message'] ?? "Server error";
-        throw errorMsg;
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ServicePage(studentID: widget.studentID, client: widget.client,),
+        ),
       );
-      setState(() {
-        isSubmitting = false;
-        swipeValue = 0.0;
-      });
+    } else {
+      final errorMsg = jsonDecode(response.body)['message'] ?? "Server error";
+      throw errorMsg;
     }
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e")),
+    );
+    setState(() {
+      isSubmitting = false;
+      swipeValue = 0.0;
+    });
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +302,7 @@ class _RunnerPaymentConfirmPage extends State<RunnerPaymentConfirmPage> {
     );
   }
 }
-
+// --- Order Summary Card ---
 Widget _infoRow(IconData icon, String title, String value){
   return Row(
     children: [

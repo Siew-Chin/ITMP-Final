@@ -22,10 +22,10 @@ class ActiveDriveTaskPage extends StatefulWidget {
 }
 
 class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
-  int currentStatus = 1;
-  bool isLoading = false;
-  Map<String, dynamic>? liveOrder; 
-  bool isPageLoading = true;
+  int currentStatus = 1; // track current order status step
+  bool isLoading = false; // loading indicator for status update
+  Map<String, dynamic>? liveOrder; // store real-time order data
+  bool isPageLoading = true; // initial page loading state
 
   @override
   void initState() {
@@ -57,6 +57,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
   }
 
   Future<void> _updateStatus(int nextS) async {
+    //Update order status and navigator to payment confirmation page
     setState(() => isLoading = true);
     final url = Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/order/update_status'); //API 5: Update Status
     try {
@@ -80,7 +81,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
 
         if (nextS == 4) {
 
-          if (!mounted) return; // 良好的 Flutter 异步习惯，防止 context 失效
+          if (!mounted) return;
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -97,7 +98,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           );
         } else {
           setState(() => isLoading = false);
-          // 可以加个 SnackBar 提示更新失败
+          
         }
       }
     } catch (e) {
@@ -112,11 +113,13 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
+      // --- AppBar ---
       appBar: AppBar(
         title: const Text(
           "Ride Progress",
-          style: TextStyle(color: Colors.black87),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
+        // --- Chat Button in AppBar ---
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
@@ -124,14 +127,12 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
               final String targetId = liveOrder?['requester_id']?.toString() ?? 
                                       widget.order['requester_id']?.toString() ?? 
                                       '';
-
               if (targetId.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Error: Requester ID not found")),
                 );
                 return;
               }
-
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => ChatPage(
@@ -147,6 +148,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
+      // --- Background ----
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -154,7 +156,11 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFEAF3FF), Color(0xFFD6E8FF), Color(0xFFBFD9FF)],
+            colors: [
+              Color(0xFFEAF3FF), 
+              Color(0xFFD6E8FF), 
+              Color(0xFFBFD9FF)
+            ],
           ),
         ),
         child: SafeArea(
@@ -165,8 +171,10 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // --- Order SUmmary Card ---
                   _summaryCard("Ride"),
                   const SizedBox(height: 25),
+                  // --- Note Box ---
                   const Text(
                     "Note:",
                     style: TextStyle(
@@ -201,7 +209,9 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
                   const SizedBox(height: 12),
                   _stepBtn("3. Finish Ride", 3, 4, const Color(0xFF4A90E2)),
                   const SizedBox(height: 40),
+                  // --- Exit Button ---
                   _escapeBtn(),
+                  // --- Loading Indicator ---
                   if (isLoading)
                     const Padding(
                       padding: EdgeInsets.only(top: 10),
@@ -216,6 +226,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
     );
   }
 
+   // --- UI ---
   Widget _summaryCard(String type) => Container(
     padding: const EdgeInsets.all(25),
     decoration: BoxDecoration(
@@ -254,6 +265,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
       ],
     ),
   );
+  // --- Reusable UI components ---
   Widget _rowSummary(
     String l,
     String v, {
@@ -280,6 +292,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
       ),
     ],
   );
+  // --- Note Box and Step Button ---
   Widget _noteBox(String text) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
@@ -297,6 +310,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
       ),
     ),
   );
+  // --- Step Button UI ---
   Widget _stepBtn(String l, int a, int t, Color c) {
     bool done = currentStatus > a;
     bool active = currentStatus == a;
@@ -319,7 +333,7 @@ class _ActiveDriveTaskPageState extends State<ActiveDriveTaskPage> {
       ),
     );
   }
-
+   // --- Exit Button ---
   Widget _escapeBtn() => TextButton.icon(
     onPressed: () => Navigator.pop(context),
     icon: const Icon(Icons.exit_to_app, color: Colors.black54),

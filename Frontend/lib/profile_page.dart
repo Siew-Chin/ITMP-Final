@@ -132,7 +132,7 @@ class _ProfilePageState extends State<ProfilePage> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => Login(client: widget.client)),
-        (route) => false, 
+        (route) => false,
       );
     }
   }
@@ -240,9 +240,9 @@ class _ProfilePageState extends State<ProfilePage> {
               context,
               MaterialPageRoute(builder: (context) => EditProfilePage(studentID: widget.studentID))
             ).then((_)async {
-              await loadProfileData();          
+              await loadProfileData();         
               widget.onProfileUpdated?.call();  
-            }), 
+            }),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6C8EF5),
               foregroundColor: Colors.white,
