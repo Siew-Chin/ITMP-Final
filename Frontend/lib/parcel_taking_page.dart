@@ -131,54 +131,53 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                   ),
                 ),
                 const SizedBox(height: 25),
-
-            // --- Drop Off Section ---
-            const Text(
-              "Drop Off Point",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)
-                ],
-              ),
-              child: Column(
-                // Drop-off location input field
-                children: [
-                  TextField(
-                    controller: _dropOffController,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      prefixIcon: Icon(Icons.location_on_outlined, color: Colors.blueGrey),
-                      hintText: "e.g. Block A, Room 101",
-                      contentPadding: EdgeInsets.symmetric(vertical: 15),
-                    ),
+                // --- Drop Off Section ---
+                const Text(
+                  "Drop Off Point",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, spreadRadius: 2)
+                    ],
                   ),
-                  const Divider(height: 1),
-                  //Checkbox: deliver to dorm
-                  CheckboxListTile(
-                    title: const Text("Deliver to Dorm", style: TextStyle(fontWeight: FontWeight.w500)),
-                    value: _isDorm,
-                    activeColor: Colors.blue,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _isDorm = value ?? false;
-                        if (_isDorm) {
-                          _dropOffController.clear();
-                        }
-                      });
-                    },
+                  child: Column(
+                    // Drop-off location input field
+                    children: [
+                      TextField(
+                        controller: _dropOffController,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          prefixIcon: Icon(Icons.location_on_outlined, color: Colors.blueGrey),
+                          hintText: "e.g. Block A, Room 101",
+                          contentPadding: EdgeInsets.symmetric(vertical: 15),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      //Checkbox: deliver to dorm
+                      CheckboxListTile(
+                        title: const Text("Deliver to Dorm", style: TextStyle(fontWeight: FontWeight.w500)),
+                        value: _isDorm,
+                        activeColor: Colors.blue,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _isDorm = value ?? false;
+                            if (_isDorm) {
+                              _dropOffController.clear();
+                            }
+                          });
+                        },
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 25),
-
+                ),
+                const SizedBox(height: 25),
+                //Details Box
                 const Text(
                   "Parcel Details",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -212,32 +211,31 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                   ),
                 ),
                 const SizedBox(height: 25),
-
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
-              ),
-              child: CheckboxListTile(
-                title: const Text(
-                  "Urgent (+RM 1.00 surcharge)",
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                // --- Urgent Checkbox ---
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                  ),
+                  child: CheckboxListTile(
+                    title: const Text(
+                      "Urgent (+RM 1.00 surcharge)",
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                    value: _isUrgent,
+                    activeColor: Colors.red,
+                    checkColor: Colors.white,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _isUrgent = value ?? false;
+                      });
+                    },
+                  ),
                 ),
-                value: _isUrgent,
-                activeColor: Colors.red,
-                checkColor: Colors.white,
-                controlAffinity: ListTileControlAffinity.leading,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _isUrgent = value ?? false;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 25),
-
-                // --- Total Price Display ---
+                const SizedBox(height: 25),
+                // --- Total Price Card ---
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -262,148 +260,125 @@ class _ParcelTakingPageState extends State<ParcelTakingPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Colors.blue]),
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(color: Colors.blue.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 5))
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Total to Pay",
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+               // --- Info Note ---
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.teal[50],
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.teal.withValues(alpha: 0.5)),
                   ),
-                  Text(
-                    "RM ${_totalPrice.toStringAsFixed(2)}",
-                    style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // --- Note Section ---
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.teal[50],
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: Colors.teal.withValues(alpha: 0.5)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.teal),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Note: The runner will reach your dorm to take your id card. Please pay the money to the runner when the parcel arrived your dorm!",
-                      style: TextStyle(color: Colors.teal, fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-             // --- Order Button ---
-            Align(
-              alignment: Alignment.bottomRight,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  if (!_isDorm && _dropOffController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Please enter a Drop Off Point or select Deliver to Dorm",
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.teal),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Note: The runner will reach your dorm to take your id card. Please pay the money to the runner when the parcel arrived your dorm!",
+                          style: TextStyle(color: Colors.teal, fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                       ),
-                    );
-                    return;
-                  }
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) => const Center(child: CircularProgressIndicator()),
-                  );
-                  try {
-                    print("DEBUG: Sending request to server...");
-                    final response = await http.post(
-                      Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/parcel/create'),//API 3: create parcel order
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'ngrok-skip-browser-warning': 'true', 
-                      },
-                      body: json.encode({
-                        "requester_id": widget.studentID,
-                        "type": "Parcel",
-                        "parcel_qty": parcel_qty,
-                        "dropoff_point": _dropOffController.text.trim(),
-                        "deliver_to_dorm": _isDorm,        
-                        "is_urgent": _isUrgent,
-                        "item_price": 0.0,
-                        "runner_profit": _totalPrice, 
-                        "total_to_collect": _totalPrice,
-                        "parcel_details": _parcelDetailsController.text.trim(),
-                      }),
-                    ).timeout(const Duration(seconds: 10));
-
-                    if (!mounted) return;
-                    Navigator.pop(context); 
-
-                    print("SERVER RESPONSE: ${response.body}");
-
-                    if (response.statusCode == 201|| response.statusCode == 200) {
-                      final data = json.decode(response.body);
-                      final String? serverOrderId = data['order_id']?.toString();
-                      if (serverOrderId != null) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => WaitingPage(
-                              orderId: serverOrderId,
-                              studentID: widget.studentID,
-                              totalPrice: _totalPrice,
-                              client: widget.client,
-                              targetPage: ParcelTrackingPage(
-                                client: widget.client,
-                                orderId: serverOrderId,
-                                studentID: widget.studentID,
-                                totalPrice: _totalPrice,
-                              ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 30),
+                // --- Order Button ---
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      if (!_isDorm && _dropOffController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Please enter a Drop Off Point or select Deliver to Dorm",
                             ),
                           ),
                         );
-                      } else {
-                        print("ERROR: order_id is missing in JSON response");
+                        return;
                       }
-                    } else {
-                      print("SERVER ERROR STATUS: ${response.statusCode}");
-                    }
-                  } catch (e) {
-                    if (mounted) Navigator.pop(context);
-                    print("CATCH ERROR: $e");
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Connection failed: $e")),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.send_rounded),
-                label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  elevation: 5,
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(child: CircularProgressIndicator()),
+                      );
+                      try {
+                        print("DEBUG: Sending request to server...");
+                        final response = await http.post(
+                          Uri.parse('https://animation-phoenix-crevice.ngrok-free.dev/api/parcel/create'),//API 3: create parcel order
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'ngrok-skip-browser-warning': 'true', 
+                          },
+                          body: json.encode({
+                            "requester_id": widget.studentID,
+                            "type": "Parcel",
+                            "parcel_qty": parcel_qty,
+                            "dropoff_point": _dropOffController.text.trim(),
+                            "deliver_to_dorm": _isDorm,        
+                            "is_urgent": _isUrgent,
+                            "item_price": 0.0,
+                            "runner_profit": _totalPrice, 
+                            "total_to_collect": _totalPrice,
+                            "parcel_details": _parcelDetailsController.text.trim(),
+                          }),
+                        ).timeout(const Duration(seconds: 10));
+
+                        if (!mounted) return;
+                        Navigator.pop(context); 
+
+                        print("SERVER RESPONSE: ${response.body}");
+
+                        if (response.statusCode == 201|| response.statusCode == 200) {
+                          final data = json.decode(response.body);
+                          final String? serverOrderId = data['order_id']?.toString();
+                          if (serverOrderId != null) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => WaitingPage(
+                                  orderId: serverOrderId,
+                                  studentID: widget.studentID,
+                                  totalPrice: _totalPrice,
+                                  client: widget.client,
+                                  targetPage: ParcelTrackingPage(
+                                    client: widget.client,
+                                    orderId: serverOrderId,
+                                    studentID: widget.studentID,
+                                    totalPrice: _totalPrice,
+                                  ),
+                                ),
+                              ),
+                            );
+                          } else {
+                            print("ERROR: order_id is missing in JSON response");
+                          }
+                        } else {
+                          print("SERVER ERROR STATUS: ${response.statusCode}");
+                        }
+                      } catch (e) {
+                        if (mounted) Navigator.pop(context);
+                        print("CATCH ERROR: $e");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Connection failed: $e")),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.send_rounded),
+                    label: const Text("Order Now", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A8A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 25),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      elevation: 5,
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 20),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );

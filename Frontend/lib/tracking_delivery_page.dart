@@ -95,7 +95,7 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
             elevation: 0,
             iconTheme: const IconThemeData(color: Colors.black),
             actions: [
-            // --- Chat Button: Only show if order is taken and runner ID is available ---
+              // --- Chat Button: Only show if order is taken and runner ID is available ---
               TextButton.icon(
                 onPressed: () {
                   _timer?.cancel();
@@ -112,52 +112,52 @@ class _TrackingDeliveryPageState extends State<TrackingDeliveryPage> {
                 icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
                 onPressed: () {
                   final String targetRunnerId = _runnerId?.toString() ?? '';
-
-                if (targetRunnerId.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Waiting for driver to connect...")),
+                  if (targetRunnerId.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Waiting for driver to connect...")),
+                    );
+                    return;
+                  }
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => ChatPage(
+                        currentUserId: widget.studentID,
+                        otherUserId: targetRunnerId, 
+                        client: widget.client,
+                      )
+                    ),
                   );
-                  return;
-                }
-
-              Navigator.push(
-                context, 
-                MaterialPageRoute(
-                  builder: (context) => ChatPage(
-                    currentUserId: widget.studentID,
-                    otherUserId: targetRunnerId, 
-                    client: widget.client,
-                  )
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _fetchOrderStatus,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 10),
-              Center(
-                child: Text(
-                  "Order ID: ${widget.orderId}",
-                  style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
-                ),
+                },
               ),
-              const SizedBox(height: 40),
-              _buildItemTimeline(),
-              const SizedBox(height: 50),
-              _buildPriceCard(),
             ],
           ),
+          body: RefreshIndicator(
+            onRefresh: _fetchOrderStatus,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Text(
+                      "Order ID: ${widget.orderId}",
+                      style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  _buildItemTimeline(),
+                  const SizedBox(height: 50),
+                  _buildPriceCard(),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: _buildBottomButton(),
         ),
-      ),
-      bottomNavigationBar: _buildBottomButton(),
+      )
     );
   }
 

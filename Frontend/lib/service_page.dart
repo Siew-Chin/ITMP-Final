@@ -438,40 +438,46 @@ class _ServicePageState extends State<ServicePage> {
           const SizedBox(height: 20),
 
           // Service cards
-          GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+          GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: 0.64, 
+            ),
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 0.7,
-            children: [
-              _serviceCard(
-                title: "Parcel Delivery",
-                imagePath: "assets/parcel_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ParcelTakingPage(studentID: widget.studentID, client: widget.client))),
-              ),
-              _serviceCard(
-                title: "Food Delivery",
-                imagePath: "assets/fooddelivery_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => food.FoodDeliveringPage(studentID: widget.studentID, client: widget.client))),
-              ),
-              _serviceCard(
-                title: "Ride",
-                imagePath: "assets/pickupndropoff_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PickupDropoffPage(studentID: widget.studentID, client: widget.client))),
-              ),
-              _serviceCard(
-                title: "Grocery",
-                imagePath: "assets/grocery_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => GroceryPurchasingScreen(studentID: widget.studentID, client: widget.client))),
-              ),
-              _serviceCard(
-                title: "Item Delivery",
-                imagePath: "assets/grocery_image.png",
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ItemDeliveryPage(studentID: widget.studentID, client: widget.client))),
-              ),
-            ],
+            itemCount: 5,
+            itemBuilder: (context, index) {
+              final services = [
+                _serviceCard(
+                  title: "Parcel Delivery",
+                  imagePath: "assets/parcel_image.png",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ParcelTakingPage(studentID: widget.studentID, client: widget.client))),
+                ),
+                _serviceCard(
+                  title: "Food Delivery",
+                  imagePath: "assets/fooddelivery_image.png",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => food.FoodDeliveringPage(studentID: widget.studentID, client: widget.client))),
+                ),
+                _serviceCard(
+                  title: "Ride",
+                  imagePath: "assets/pickupndropoff_image.png",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PickupDropoffPage(studentID: widget.studentID, client: widget.client))),
+                ),
+                _serviceCard(
+                  title: "Grocery",
+                  imagePath: "assets/grocery_image.png",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => GroceryPurchasingScreen(studentID: widget.studentID, client: widget.client))),
+                ),
+                _serviceCard(
+                  title: "Item Delivery",
+                  imagePath: "assets/grocery_image.png",
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ItemDeliveryPage(studentID: widget.studentID, client: widget.client))),
+                ),
+              ];
+              return services[index];
+            },
           ),
         ],
       ),

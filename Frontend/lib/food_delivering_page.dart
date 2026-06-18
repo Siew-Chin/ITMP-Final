@@ -298,7 +298,7 @@ class _FoodDeliveringPageState extends State<FoodDeliveringPage> {
                   ),
                 ),
                 const SizedBox(height: 25),
-                const SizedBox(height: 25),
+                // --- Drop Off Section ---
                 const Text("Drop Off Point", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 Container(
@@ -337,6 +337,7 @@ class _FoodDeliveringPageState extends State<FoodDeliveringPage> {
                   ),
                 ),
                 const SizedBox(height: 25),
+                //Details Box
                 const Text("Any details? (Optional)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 Container(
@@ -424,6 +425,7 @@ class _FoodDeliveringPageState extends State<FoodDeliveringPage> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 20),
                 // --- Info Note ---
                 Container(
                   padding: const EdgeInsets.all(16),

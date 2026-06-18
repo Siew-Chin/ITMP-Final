@@ -2,11 +2,11 @@
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-<uses-permission android:name="android.permission.INTERNET" /> <!-- 上传必须有网络权限 -->
+<uses-permission android:name="android.permission.INTERNET" /> 
     <application
-        android:label="my_new_app"
+        android:label="TO YOUR DORM"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launcher_icon"
         android:enableOnBackInvokedCallback="true">
 
         <meta-data
